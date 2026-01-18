@@ -58,10 +58,12 @@ export default {
 				},
         voicely: {
           green: 'hsl(var(--voicely-green))',
+          mint: 'hsl(var(--voicely-mint))',
           yellow: 'hsl(var(--voicely-yellow))',
           red: 'hsl(var(--voicely-red))',
-          purple: 'hsl(var(--voicely-purple))',
           orange: 'hsl(var(--voicely-orange))',
+          coral: 'hsl(var(--voicely-coral))',
+          charcoal: 'hsl(var(--voicely-charcoal))',
         }
 			},
 			borderRadius: {
