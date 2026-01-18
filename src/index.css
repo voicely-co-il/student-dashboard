@@ -1,75 +1,95 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Voicely Brand Colors - from logo */
+    --background: 140 20% 98%;
+    --foreground: 220 10% 25%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 10% 25%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 10% 25%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Voicely Green (from bird body) */
+    --primary: 158 72% 52%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary: Soft mint background */
+    --secondary: 158 40% 95%;
+    --secondary-foreground: 158 72% 35%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted: Soft gray-green */
+    --muted: 160 15% 93%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent: Voicely Orange (from wing feathers) */
+    --accent: 24 95% 58%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 160 20% 88%;
+    --input: 160 20% 88%;
+    --ring: 158 72% 52%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    --voicely-green: 140 60% 50%;
-    --voicely-yellow: 45 80% 55%;
+    /* Voicely Semantic Colors */
+    --voicely-green: 158 72% 52%;
+    --voicely-mint: 158 60% 70%;
+    --voicely-yellow: 45 90% 55%;
     --voicely-red: 0 74% 60%;
-    --voicely-purple: 260 70% 65%;
-    --voicely-orange: 25 90% 60%;
+    --voicely-orange: 24 95% 58%;
+    --voicely-coral: 12 85% 55%;
+    --voicely-charcoal: 220 10% 35%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(158 72% 52%), hsl(158 60% 70%));
+    --gradient-accent: linear-gradient(135deg, hsl(24 95% 58%), hsl(12 85% 55%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(160 20% 98%));
   }
 
   .dark {
-    --background: 224 10% 10%;
-    --foreground: 210 40% 98%;
+    --background: 220 15% 10%;
+    --foreground: 160 20% 95%;
 
-    --card: 224 10% 15%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 15% 14%;
+    --card-foreground: 160 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 15% 12%;
+    --popover-foreground: 160 20% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 158 72% 52%;
+    --primary-foreground: 220 15% 10%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 158 60% 70%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 15% 20%;
+    --muted-foreground: 160 15% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 24 95% 58%;
+    --accent-foreground: 220 15% 10%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 25.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 220 15% 22%;
+    --input: 220 15% 20%;
+    --ring: 158 72% 52%;
+
+    --voicely-green: 158 72% 52%;
+    --voicely-mint: 158 50% 45%;
+    --voicely-yellow: 45 90% 55%;
+    --voicely-red: 0 74% 55%;
+    --voicely-orange: 24 95% 58%;
+    --voicely-coral: 12 85% 55%;
+    --voicely-charcoal: 220 10% 70%;
   }
 }
 
@@ -79,10 +99,27 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
   }
   
   .recharts-surface {
     direction: ltr;
+  }
+}
+
+@layer utilities {
+  .playful-shadow {
+    box-shadow: 0 4px 20px -4px hsl(158 72% 52% / 0.15),
+                0 2px 8px -2px hsl(0 0% 0% / 0.08);
+  }
+  
+  .playful-shadow-accent {
+    box-shadow: 0 4px 20px -4px hsl(24 95% 58% / 0.2),
+                0 2px 8px -2px hsl(0 0% 0% / 0.08);
+  }
+  
+  .glass-effect {
+    backdrop-filter: blur(12px);
+    background: hsl(0 0% 100% / 0.8);
   }
 }
