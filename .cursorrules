@@ -1,0 +1,56 @@
+# Voicely Student Dashboard - Cursor Rules
+
+## Project Context
+This is the Voicely Student Dashboard - a React/TypeScript application for tracking student progress in language learning.
+
+## Tech Stack
+- React 18 + TypeScript + Vite
+- Tailwind CSS + shadcn/ui
+- TanStack Query for data fetching
+- Supabase for backend
+- Deployed on Vercel
+
+## Code Style
+- Use TypeScript strict mode
+- Prefer functional components with hooks
+- Use shadcn/ui components from `@/components/ui`
+- Follow existing patterns in the codebase
+- RTL (Hebrew) is the default direction
+
+## Important Guidelines
+
+### Environment Variables
+**CRITICAL: Never hardcode or expose API keys, secrets, or credentials in code.**
+
+Environment variables are accessed via `import.meta.env`:
+```typescript
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+```
+
+- All client-side env vars must be prefixed with `VITE_`
+- Store secrets in `.env` locally (gitignored)
+- Configure production vars in Vercel dashboard
+
+### File Organization
+- Components: `src/components/`
+- Pages: `src/pages/`
+- Hooks: `src/hooks/`
+- Utils: `src/lib/`
+- Supabase integration: `src/integrations/supabase/`
+
+### Imports
+Use path alias `@/` for imports:
+```typescript
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/hooks/useAuth"
+```
+
+### Styling
+- Use Tailwind CSS classes
+- Follow existing color scheme (dark mode default)
+- Maintain RTL compatibility
+
+## Repository
+- GitHub: https://github.com/voicely-co-il/student-dashboard
+- Auto-deploys to Vercel on push to main
