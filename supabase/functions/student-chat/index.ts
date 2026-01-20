@@ -13,16 +13,65 @@ interface ConversationMessage {
   content: string;
 }
 
+interface Memory {
+  id: string;
+  memory_type: string;
+  content: string;
+  confidence: number;
+  importance: number;
+  similarity?: number;
+}
+
 interface StudentChatRequest {
   message: string;
   studentId: string;
   studentName: string;
+  sessionId?: string;
   conversationHistory?: ConversationMessage[];
 }
 
-// System prompt for student AI assistant
-const SYSTEM_PROMPT = `אתה עוזר AI של Voicely, מערכת ללמידת קול ושירה.
+// Build system prompt with memory context
+function buildSystemPrompt(studentName: string, memories: Memory[]): string {
+  let memoryContext = "";
+
+  if (memories.length > 0) {
+    const facts = memories.filter((m) => m.memory_type === "fact");
+    const preferences = memories.filter((m) => m.memory_type === "preference");
+    const goals = memories.filter((m) => m.memory_type === "goal");
+    const challenges = memories.filter((m) => m.memory_type === "challenge");
+    const achievements = memories.filter((m) => m.memory_type === "achievement");
+
+    const sections: string[] = [];
+
+    if (facts.length > 0) {
+      sections.push(`עובדות: ${facts.map((m) => m.content).join("; ")}`);
+    }
+    if (preferences.length > 0) {
+      sections.push(`העדפות: ${preferences.map((m) => m.content).join("; ")}`);
+    }
+    if (goals.length > 0) {
+      sections.push(`מטרות: ${goals.map((m) => m.content).join("; ")}`);
+    }
+    if (challenges.length > 0) {
+      sections.push(`אתגרים: ${challenges.map((m) => m.content).join("; ")}`);
+    }
+    if (achievements.length > 0) {
+      sections.push(`הישגים: ${achievements.map((m) => m.content).join("; ")}`);
+    }
+
+    memoryContext = `
+
+## מה אתה יודע על ${studentName}:
+${sections.join("\n")}
+
+השתמש במידע הזה כדי להתאים את התשובות שלך. התייחס למה שאתה יודע על התלמיד כשזה רלוונטי.`;
+  }
+
+  return `אתה עוזר AI של Voicely, מערכת ללמידת קול ושירה.
 אתה מדבר עברית ועוזר לתלמידים לשפר את הטכניקה הקולית שלהם.
+
+שם התלמיד: ${studentName}
+${memoryContext}
 
 יכולות שלך:
 1. **חיפוש בשיעורים קודמים**: לחפש מידע מהשיעורים של התלמיד
@@ -35,11 +84,79 @@ const SYSTEM_PROMPT = `אתה עוזר AI של Voicely, מערכת ללמידת 
 - תן עצות מעשיות וספציפיות
 - עודד את התלמיד להמשיך להתאמן
 - אם אין לך מידע - אמור זאת בכנות
+- אם יש לך מידע קודם על התלמיד - השתמש בו בתשובות
 
 אתה לא יכול:
 - לגשת לנתונים של תלמידים אחרים
 - לקבוע שיעורים (הפנה למורה)
 - לתת אבחנות רפואיות`;
+}
+
+// Retrieve memories from database
+async function retrieveMemories(
+  supabase: any,
+  userId: string,
+  query: string,
+  limit: number = 8
+): Promise<Memory[]> {
+  const openaiKey = Deno.env.get("OPENAI_API_KEY");
+
+  if (!openaiKey) {
+    console.log("No OpenAI key - skipping memory retrieval");
+    return [];
+  }
+
+  try {
+    // Generate embedding for query
+    const embeddingResponse = await fetch(
+      "https://api.openai.com/v1/embeddings",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openaiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "text-embedding-3-small",
+          input: query,
+        }),
+      }
+    );
+
+    const embeddingData = await embeddingResponse.json();
+    const queryEmbedding = embeddingData.data?.[0]?.embedding;
+
+    if (!queryEmbedding) {
+      console.log("Failed to generate embedding for memory search");
+      return [];
+    }
+
+    // Search memories
+    const { data: memories, error } = await supabase.rpc("match_user_memories", {
+      query_embedding: queryEmbedding,
+      p_user_id: userId,
+      match_threshold: 0.5,
+      match_count: limit,
+    });
+
+    if (error) {
+      console.error("Memory search error:", error);
+      return [];
+    }
+
+    // Update last_accessed for used memories
+    if (memories && memories.length > 0) {
+      await supabase.rpc("touch_memories", {
+        memory_ids: memories.map((m: Memory) => m.id),
+      });
+    }
+
+    return memories || [];
+  } catch (error) {
+    console.error("Memory retrieval error:", error);
+    return [];
+  }
+}
 
 // Search transcripts for specific student
 async function searchStudentTranscripts(
@@ -56,7 +173,6 @@ async function searchStudentTranscripts(
   }
 
   try {
-    // Generate embedding
     const embeddingResponse = await fetch(
       "https://api.openai.com/v1/embeddings",
       {
@@ -79,7 +195,6 @@ async function searchStudentTranscripts(
       return [];
     }
 
-    // Search transcripts filtered by student
     const { data: results, error } = await supabase.rpc("search_transcripts", {
       query_embedding: queryEmbedding,
       match_threshold: 0.65,
@@ -180,8 +295,8 @@ function classifyQuestion(message: string): "technique" | "personal" | "general"
 
 // Generate response using Gemini
 async function generateResponse(
+  systemPrompt: string,
   message: string,
-  studentName: string,
   context: string,
   history: ConversationMessage[]
 ): Promise<string> {
@@ -197,7 +312,7 @@ async function generateResponse(
   }));
 
   const contextText = context
-    ? `\n\n[מידע רלוונטי מהשיעורים והאתר]\n${context}`
+    ? `\n\n[מידע רלוונטי]\n${context}`
     : "";
 
   conversationParts.push({
@@ -209,9 +324,7 @@ async function generateResponse(
     const allContents = [
       {
         role: "user",
-        parts: [{
-          text: `${SYSTEM_PROMPT}\n\nשם התלמיד: ${studentName}\nענה בעברית בצורה חמימה ומעודדת.`
-        }]
+        parts: [{ text: systemPrompt }]
       },
       { role: "model", parts: [{ text: "הבנתי, אני מוכן לעזור." }] },
       ...conversationParts,
@@ -258,6 +371,7 @@ Deno.serve(async (req) => {
       message,
       studentId,
       studentName,
+      sessionId,
       conversationHistory = []
     }: StudentChatRequest = await req.json();
 
@@ -286,15 +400,22 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Classify the question
+    // 1. Retrieve relevant memories
+    const memories = await retrieveMemories(supabase, studentId, message);
+    console.log(`Retrieved ${memories.length} memories for context`);
+
+    // 2. Build system prompt with memories
+    const systemPrompt = buildSystemPrompt(studentName || "תלמיד/ה", memories);
+
+    // 3. Classify the question
     const questionType = classifyQuestion(message);
     console.log(`Question type: ${questionType}, Message: ${message}`);
 
+    // 4. Build context from transcripts/website
     let context = "";
 
     // Search based on question type
     if (questionType === "personal" || questionType === "general") {
-      // Search student's transcripts
       const transcriptResults = await searchStudentTranscripts(
         supabase,
         message,
@@ -311,7 +432,6 @@ Deno.serve(async (req) => {
     }
 
     if (questionType === "technique" || questionType === "general") {
-      // Search website for technique info
       const websiteResults = await searchWebsiteContent(supabase, message, 3);
 
       if (websiteResults.length > 0) {
@@ -322,19 +442,34 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Generate response
+    // 5. Generate response
     const response = await generateResponse(
+      systemPrompt,
       message,
-      studentName || "תלמיד/ה",
       context,
       conversationHistory
     );
+
+    // 6. Update session with context used (if sessionId provided)
+    if (sessionId && memories.length > 0) {
+      try {
+        await supabase
+          .from("student_chat_sessions")
+          .update({
+            context_used: memories.map((m) => m.id),
+          })
+          .eq("id", sessionId);
+      } catch (error) {
+        console.log("Failed to update session context:", error);
+      }
+    }
 
     return new Response(
       JSON.stringify({
         response,
         questionType,
         hasContext: context.length > 0,
+        memoriesUsed: memories.length,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

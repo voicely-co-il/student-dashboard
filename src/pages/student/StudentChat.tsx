@@ -5,11 +5,18 @@ import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { QuickActions } from "@/components/chat/QuickActions";
-import { ArrowRight, Trash2, Sparkles } from "lucide-react";
+import { ArrowRight, Trash2, Sparkles, Brain, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const StudentChat = () => {
-  const { messages, isLoading, sendMessage, clearHistory } = useStudentChat();
+  const {
+    messages,
+    isLoading,
+    isLoadingSession,
+    sendMessage,
+    clearHistory,
+    memoriesCount
+  } = useStudentChat();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change
@@ -25,6 +32,16 @@ const StudentChat = () => {
     { label: "תרגילים לחימום", prompt: "תן לי תרגילי חימום קוליים" },
     { label: "טיפים לביטחון בבמה", prompt: "איך להרגיש יותר בטוח על הבמה?" },
   ];
+
+  // Show loading while session is being loaded
+  if (isLoadingSession) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center" dir="rtl">
+        <Loader2 className="h-8 w-8 animate-spin text-voicely-green mb-4" />
+        <p className="text-muted-foreground">טוען את השיחה...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col" dir="rtl">
@@ -43,7 +60,14 @@ const StudentChat = () => {
                   <Sparkles className="h-5 w-5 text-voicely-green" />
                   עוזר הלמידה שלי
                 </h1>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  {memoriesCount > 0 && (
+                    <>
+                      <Brain className="h-3 w-3" />
+                      <span>{memoriesCount} זיכרונות</span>
+                      <span className="mx-1">•</span>
+                    </>
+                  )}
                   שאל אותי על טכניקה או השיעורים שלך
                 </p>
               </div>

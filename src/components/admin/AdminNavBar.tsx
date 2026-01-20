@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Radio,
   Gauge,
+  Sparkles,
 } from 'lucide-react';
 
 const navItems = [
@@ -18,6 +19,7 @@ const navItems = [
   { href: '/admin/live-chat', label: 'צ\'אט חי', icon: Radio },
   { href: '/admin/analytics', label: 'אנליטיקס', icon: BarChart3 },
   { href: '/admin/resources', label: 'משאבים', icon: Gauge },
+  { href: '/admin/marketing', label: 'שיווק', icon: Sparkles },
 ];
 
 const AdminNavBar = () => {

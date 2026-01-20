@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface TableSize {
+  table_name: string;
+  total_size: string;
+  total_bytes: number;
+}
+
 export interface ResourceUsage {
   supabase: {
     plan: string;
@@ -25,6 +31,7 @@ export interface ResourceUsage {
       limit: number;
       percentUsed: number;
     };
+    tableSizes?: TableSize[];
   };
   gemini: {
     plan: string;

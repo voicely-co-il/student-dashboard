@@ -32,6 +32,11 @@ interface ResourceUsage {
       limit: number;
       percentUsed: number;
     };
+    tableSizes?: {
+      table_name: string;
+      total_size: string;
+      total_bytes: number;
+    }[];
   };
   gemini: {
     plan: string;
@@ -93,6 +98,9 @@ async function getSupabaseStats(supabase: any): Promise<ResourceUsage["supabase"
     .eq("event_type", "edge_function_call")
     .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
 
+  // Get table sizes breakdown
+  const { data: tableSizes } = await supabase.rpc("get_table_sizes");
+
   // Free tier limits
   const FREE_TIER = {
     database: 500 * 1024 * 1024, // 500 MB
@@ -126,6 +134,7 @@ async function getSupabaseStats(supabase: any): Promise<ResourceUsage["supabase"
       limit: FREE_TIER.mau,
       percentUsed: Math.round(((mauCount || 0) / FREE_TIER.mau) * 100),
     },
+    tableSizes: tableSizes || [],
   };
 }
 

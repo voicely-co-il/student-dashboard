@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAnalyticsOverview } from '@/hooks/admin/useAnalyticsOverview';
 import { useNotionCRM } from '@/hooks/admin/useNotionCRM';
+import StudentSessionsCard from './StudentSessionsCard';
 import {
   ResponsiveContainer,
   BarChart,
@@ -365,6 +366,9 @@ const AnalyticsOverview = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Student Sessions - מפגשים לפי תלמיד */}
+      <StudentSessionsCard />
 
       {/* Mood Distribution */}
       <Card className="playful-shadow">

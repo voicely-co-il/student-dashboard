@@ -1,4 +1,4 @@
-import { useResourcesUsage, formatBytes, formatCurrency } from "@/hooks/admin/useResourcesUsage";
+import { useResourcesUsage, formatBytes, formatCurrency, TableSize } from "@/hooks/admin/useResourcesUsage";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,8 @@ import {
   AlertTriangle,
   CheckCircle,
   ExternalLink,
+  AlertOctagon,
+  Table,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +122,89 @@ function ResourceCard({
   );
 }
 
+function OverLimitAlert({ percent, resource }: { percent: number; resource: string }) {
+  if (percent < 100) return null;
+
+  return (
+    <Card className="border-red-500 bg-red-50 dark:bg-red-950/30 mb-6">
+      <CardContent className="pt-6">
+        <div className="flex items-start gap-3">
+          <AlertOctagon className="w-6 h-6 text-red-500 flex-shrink-0" />
+          <div>
+            <h3 className="font-semibold text-red-700 dark:text-red-400">
+              חריגה מה-Limit!
+            </h3>
+            <p className="text-red-600 dark:text-red-300 text-sm mt-1">
+              {resource} עבר את המכסה המותרת ({percent}%).
+              יש לשדרג לתוכנית Pro ($25/חודש) או לצמצם את השימוש.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <Button size="sm" variant="destructive" asChild>
+                <a href="https://supabase.com/dashboard/project/jldfxkbczzxawdqsznze/settings/billing" target="_blank" rel="noopener noreferrer">
+                  שדרג ל-Pro
+                  <ExternalLink className="w-3 h-3 ms-1" />
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TableSizesBreakdown({ tables }: { tables: TableSize[] }) {
+  if (!tables || tables.length === 0) return null;
+
+  const totalBytes = tables.reduce((acc, t) => acc + t.total_bytes, 0);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Table className="w-5 h-5" />
+          פירוט טבלאות לפי גודל
+        </CardTitle>
+        <CardDescription>
+          סה"כ: {formatBytes(totalBytes)}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {tables.slice(0, 10).map((table) => {
+            const percent = Math.round((table.total_bytes / totalBytes) * 100);
+            return (
+              <div key={table.table_name} className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-mono text-xs truncate">{table.table_name}</span>
+                    <span className="text-muted-foreground">{table.total_size}</span>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full",
+                        percent > 50 ? "bg-red-500" : percent > 20 ? "bg-amber-500" : "bg-emerald-500"
+                      )}
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                </div>
+                <span className="text-xs text-muted-foreground w-10 text-left">{percent}%</span>
+              </div>
+            );
+          })}
+        </div>
+        {tables.length > 10 && (
+          <p className="text-xs text-muted-foreground mt-3">
+            ועוד {tables.length - 10} טבלאות נוספות...
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function LoadingSkeleton() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -172,6 +257,11 @@ export default function AdminResources() {
           </Card>
         )}
 
+        {/* Over-limit warning */}
+        {data && data.supabase.database.percentUsed >= 100 && (
+          <OverLimitAlert percent={data.supabase.database.percentUsed} resource="בסיס הנתונים" />
+        )}
+
         {isLoading ? (
           <LoadingSkeleton />
         ) : data ? (
@@ -218,6 +308,13 @@ export default function AdminResources() {
                   percent={data.supabase.auth.percentUsed}
                 />
               </div>
+
+              {/* Table sizes breakdown */}
+              {data.supabase.tableSizes && data.supabase.tableSizes.length > 0 && (
+                <div className="mt-4">
+                  <TableSizesBreakdown tables={data.supabase.tableSizes} />
+                </div>
+              )}
             </div>
 
             {/* AI Section */}
