@@ -99,7 +99,8 @@ Deno.serve(async (req) => {
 
     // Get Astria credentials
     const ASTRIA_API_KEY = Deno.env.get("ASTRIA_API_KEY");
-    const ASTRIA_TUNE_ID = Deno.env.get("ASTRIA_TUNE_ID");
+    const ASTRIA_TUNE_ID_INBAL = Deno.env.get("ASTRIA_TUNE_ID_INBAL");
+    const ASTRIA_TUNE_ID_ILYA = Deno.env.get("ASTRIA_TUNE_ID_ILYA");
 
     if (!ASTRIA_API_KEY) {
       return new Response(JSON.stringify({ error: "Astria API not configured" }), {
@@ -108,12 +109,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build enhanced prompt with character token if specified
+    // Select tune and build prompt based on character
+    let tuneId: string | undefined;
     let enhancedPrompt = prompt;
+
     if (character === "inbal") {
+      tuneId = ASTRIA_TUNE_ID_INBAL;
       enhancedPrompt = `ohwx woman, ${prompt}`;
     } else if (character === "ilya") {
+      tuneId = ASTRIA_TUNE_ID_ILYA;
       enhancedPrompt = `sks man, ${prompt}`;
+    }
+
+    if (!tuneId) {
+      return new Response(JSON.stringify({ error: "Please select a character (Inbal or Ilya)" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Add brand colors hint
@@ -147,7 +159,7 @@ Deno.serve(async (req) => {
 
     while (attempt < MAX_RETRIES) {
       try {
-        const response = await fetch(`${ASTRIA_API_BASE}/tunes/${ASTRIA_TUNE_ID}/prompts`, {
+        const response = await fetch(`${ASTRIA_API_BASE}/tunes/${tuneId}/prompts`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${ASTRIA_API_KEY}`,
@@ -229,7 +241,7 @@ Deno.serve(async (req) => {
     while (pollAttempts < maxPollAttempts && !imageUrl) {
       await sleep(10000); // Wait 10 seconds between polls
 
-      const statusResponse = await fetch(`${ASTRIA_API_BASE}/tunes/${ASTRIA_TUNE_ID}/prompts/${promptId}`, {
+      const statusResponse = await fetch(`${ASTRIA_API_BASE}/tunes/${tuneId}/prompts/${promptId}`, {
         headers: {
           "Authorization": `Bearer ${ASTRIA_API_KEY}`,
         },

@@ -9,7 +9,8 @@ import {
   Target,
   Megaphone,
   RefreshCw,
-  Star
+  Star,
+  FileText,
 } from 'lucide-react';
 import AnalyticsOverview from '@/components/admin/analytics/AnalyticsOverview';
 import TrendsDashboard from '@/components/admin/analytics/TrendsDashboard';
@@ -18,6 +19,7 @@ import StudentArchetypes from '@/components/admin/analytics/StudentArchetypes';
 import SuccessPatterns from '@/components/admin/analytics/SuccessPatterns';
 import MarketingInsights from '@/components/admin/analytics/MarketingInsights';
 import TestimonialTool from '@/components/admin/analytics/TestimonialTool';
+import StudentTranscriptsList from '@/components/admin/analytics/StudentTranscriptsList';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -46,6 +48,7 @@ const AdminAnalytics = () => {
 
   const tabs = [
     { id: 'overview', label: 'סקירה כללית', icon: BarChart3 },
+    { id: 'transcripts', label: 'תלמידים ותמלולים', icon: FileText },
     { id: 'trends', label: 'מגמות', icon: TrendingUp },
     { id: 'methodology', label: 'שיטת ההוראה', icon: Lightbulb },
     { id: 'students', label: 'ארכיטיפי תלמידים', icon: Users },
@@ -94,6 +97,10 @@ const AdminAnalytics = () => {
 
           <TabsContent value="overview" className="mt-0">
             <AnalyticsOverview />
+          </TabsContent>
+
+          <TabsContent value="transcripts" className="mt-0">
+            <StudentTranscriptsList />
           </TabsContent>
 
           <TabsContent value="trends" className="mt-0">
