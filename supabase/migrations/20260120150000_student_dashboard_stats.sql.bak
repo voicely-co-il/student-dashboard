@@ -1,0 +1,292 @@
+-- Student Dashboard Stats Migration
+-- Adds tables for tracking XP, streaks, daily goals, and achievements
+
+-- Student Stats Table (XP, Level, Streaks)
+CREATE TABLE IF NOT EXISTS student_stats (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+
+  -- XP & Level
+  current_xp INTEGER NOT NULL DEFAULT 0,
+  level INTEGER NOT NULL DEFAULT 1,
+  level_name TEXT NOT NULL DEFAULT 'מתחיל',
+  xp_to_next_level INTEGER NOT NULL DEFAULT 100,
+
+  -- Streaks
+  current_streak INTEGER NOT NULL DEFAULT 0,
+  longest_streak INTEGER NOT NULL DEFAULT 0,
+  last_activity_date DATE,
+  streak_freeze_available BOOLEAN NOT NULL DEFAULT FALSE,
+  streak_freeze_used_at TIMESTAMP WITH TIME ZONE,
+
+  -- Voice Score (aggregate)
+  voice_score INTEGER DEFAULT 0,
+
+  -- Breathing metrics
+  breath_duration_seconds INTEGER DEFAULT 0,
+  breath_goal_seconds INTEGER DEFAULT 20,
+
+  -- Pitch accuracy
+  pitch_accuracy_percent INTEGER DEFAULT 0,
+
+  -- Voice comfort (1-5 scale)
+  voice_comfort_level INTEGER DEFAULT 1,
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  UNIQUE(student_id)
+);
+
+-- Daily Goals Table
+CREATE TABLE IF NOT EXISTS daily_goals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+
+  -- Goal settings
+  goal_minutes INTEGER NOT NULL DEFAULT 30,
+  completed_minutes INTEGER NOT NULL DEFAULT 0,
+
+  -- Tasks
+  total_tasks INTEGER NOT NULL DEFAULT 0,
+  tasks_completed INTEGER NOT NULL DEFAULT 0,
+
+  -- Status
+  is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+  completed_at TIMESTAMP WITH TIME ZONE,
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+
+  UNIQUE(student_id, date)
+);
+
+-- Achievements/Badges Table
+CREATE TABLE IF NOT EXISTS achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  name_he TEXT NOT NULL,
+  description TEXT NOT NULL,
+  description_he TEXT NOT NULL,
+  icon TEXT NOT NULL DEFAULT '🏆',
+  rarity TEXT NOT NULL DEFAULT 'common' CHECK (rarity IN ('common', 'rare', 'epic', 'legendary')),
+
+  -- Unlock criteria
+  criteria_type TEXT NOT NULL, -- 'streak', 'lessons', 'recordings', 'score', 'time', 'special'
+  criteria_value INTEGER, -- e.g., 7 for 7-day streak
+
+  -- XP reward
+  xp_reward INTEGER NOT NULL DEFAULT 10,
+
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Student Achievements (earned badges)
+CREATE TABLE IF NOT EXISTS student_achievements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  achievement_id UUID NOT NULL REFERENCES achievements(id) ON DELETE CASCADE,
+
+  earned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  progress INTEGER DEFAULT 0, -- for achievements in progress (0-100)
+  is_earned BOOLEAN NOT NULL DEFAULT FALSE,
+
+  UNIQUE(student_id, achievement_id)
+);
+
+-- Advisor Notes Table (teacher feedback shown on dashboard)
+CREATE TABLE IF NOT EXISTS advisor_notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  teacher_id UUID,
+
+  note TEXT NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Action Plan Items (recommended exercises)
+CREATE TABLE IF NOT EXISTS action_plan_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+
+  title TEXT NOT NULL,
+  description TEXT,
+  type TEXT NOT NULL DEFAULT 'exercise', -- 'exercise', 'song', 'breathing', 'warmup'
+
+  is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+  completed_at TIMESTAMP WITH TIME ZONE,
+
+  priority INTEGER NOT NULL DEFAULT 0,
+  due_date DATE,
+
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_student_stats_student_id ON student_stats(student_id);
+CREATE INDEX IF NOT EXISTS idx_daily_goals_student_date ON daily_goals(student_id, date);
+CREATE INDEX IF NOT EXISTS idx_student_achievements_student ON student_achievements(student_id);
+CREATE INDEX IF NOT EXISTS idx_advisor_notes_student ON advisor_notes(student_id) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_action_plan_student ON action_plan_items(student_id) WHERE is_completed = FALSE;
+
+-- RLS Policies
+ALTER TABLE student_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_goals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE achievements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE student_achievements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE advisor_notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE action_plan_items ENABLE ROW LEVEL SECURITY;
+
+-- Students can read their own stats
+CREATE POLICY "Students can view own stats"
+  ON student_stats FOR SELECT
+  USING (student_id IN (SELECT id FROM students WHERE user_id = auth.uid()));
+
+-- Students can read their own daily goals
+CREATE POLICY "Students can view own daily goals"
+  ON daily_goals FOR SELECT
+  USING (student_id IN (SELECT id FROM students WHERE user_id = auth.uid()));
+
+-- Students can update their own daily goals (for progress tracking)
+CREATE POLICY "Students can update own daily goals"
+  ON daily_goals FOR UPDATE
+  USING (student_id IN (SELECT id FROM students WHERE user_id = auth.uid()));
+
+-- Everyone can read achievements (badge definitions)
+CREATE POLICY "Anyone can view achievements"
+  ON achievements FOR SELECT
+  USING (is_active = TRUE);
+
+-- Students can view their earned achievements
+CREATE POLICY "Students can view own earned achievements"
+  ON student_achievements FOR SELECT
+  USING (student_id IN (SELECT id FROM students WHERE user_id = auth.uid()));
+
+-- Students can view their advisor notes
+CREATE POLICY "Students can view own advisor notes"
+  ON advisor_notes FOR SELECT
+  USING (student_id IN (SELECT id FROM students WHERE user_id = auth.uid()) AND is_active = TRUE);
+
+-- Students can view their action plan
+CREATE POLICY "Students can view own action plan"
+  ON action_plan_items FOR SELECT
+  USING (student_id IN (SELECT id FROM students WHERE user_id = auth.uid()));
+
+-- Students can update action plan items (mark as completed)
+CREATE POLICY "Students can update own action plan"
+  ON action_plan_items FOR UPDATE
+  USING (student_id IN (SELECT id FROM students WHERE user_id = auth.uid()));
+
+-- Teachers/Admins policies
+CREATE POLICY "Teachers can manage student stats"
+  ON student_stats FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('teacher', 'admin'))
+  );
+
+CREATE POLICY "Teachers can manage daily goals"
+  ON daily_goals FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('teacher', 'admin'))
+  );
+
+CREATE POLICY "Admins can manage achievements"
+  ON achievements FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Teachers can manage student achievements"
+  ON student_achievements FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('teacher', 'admin'))
+  );
+
+CREATE POLICY "Teachers can manage advisor notes"
+  ON advisor_notes FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('teacher', 'admin'))
+  );
+
+CREATE POLICY "Teachers can manage action plans"
+  ON action_plan_items FOR ALL
+  USING (
+    EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role IN ('teacher', 'admin'))
+  );
+
+-- Insert default achievements
+INSERT INTO achievements (name, name_he, description, description_he, icon, rarity, criteria_type, criteria_value, xp_reward) VALUES
+  ('First Step', 'צעד ראשון', 'Complete your first lesson', 'השלמת שיעור ראשון', '🎤', 'common', 'lessons', 1, 10),
+  ('Week of Success', 'שבוע של הצלחה', '7 consecutive days of practice', '7 ימים רצופים של תרגול', '🔥', 'rare', 'streak', 7, 50),
+  ('Golden Voice', 'קול זהב', 'Achieve 90+ pitch accuracy', 'ציון 90+ בדיוק צליל', '⭐', 'epic', 'score', 90, 100),
+  ('Breath Master', 'מאסטר נשימה', '30 seconds continuous breath', 'נשימה של 30 שניות', '💨', 'rare', 'time', 30, 50),
+  ('Perfect Month', 'חודש מושלם', '30 consecutive days', '30 ימים רצופים', '🏆', 'legendary', 'streak', 30, 200),
+  ('True Singer', 'מנגנת אמיתית', 'Record 10 sessions', '10 הקלטות', '🎵', 'common', 'recordings', 10, 30),
+  ('Morning Practice', 'תרגול בוקר', 'Practice before 8 AM', 'תרגול לפני 8 בבוקר', '🌅', 'common', 'special', NULL, 20),
+  ('Harmony', 'הרמוניה', 'Complete harmony exercise', 'שירה רב קולית', '🎶', 'epic', 'special', NULL, 75)
+ON CONFLICT DO NOTHING;
+
+-- Function to update streak on activity
+CREATE OR REPLACE FUNCTION update_student_streak()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Check if last activity was yesterday
+  IF NEW.last_activity_date = CURRENT_DATE - INTERVAL '1 day' THEN
+    NEW.current_streak := NEW.current_streak + 1;
+  -- Check if last activity was today (already counted)
+  ELSIF NEW.last_activity_date = CURRENT_DATE THEN
+    -- No change
+    NULL;
+  -- Streak broken (unless freeze was used)
+  ELSIF NEW.streak_freeze_available AND NEW.streak_freeze_used_at IS NULL THEN
+    NEW.streak_freeze_used_at := NOW();
+    NEW.streak_freeze_available := FALSE;
+  ELSE
+    NEW.current_streak := 1;
+  END IF;
+
+  -- Update longest streak if needed
+  IF NEW.current_streak > NEW.longest_streak THEN
+    NEW.longest_streak := NEW.current_streak;
+  END IF;
+
+  NEW.last_activity_date := CURRENT_DATE;
+  NEW.updated_at := NOW();
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for streak updates
+DROP TRIGGER IF EXISTS trigger_update_streak ON student_stats;
+CREATE TRIGGER trigger_update_streak
+  BEFORE UPDATE ON student_stats
+  FOR EACH ROW
+  WHEN (NEW.last_activity_date IS DISTINCT FROM OLD.last_activity_date)
+  EXECUTE FUNCTION update_student_streak();
+
+-- Function to calculate level from XP
+CREATE OR REPLACE FUNCTION calculate_level(xp INTEGER)
+RETURNS TABLE(level INTEGER, level_name TEXT, xp_to_next INTEGER) AS $$
+BEGIN
+  IF xp < 100 THEN
+    RETURN QUERY SELECT 1, 'מתחיל'::TEXT, 100 - xp;
+  ELSIF xp < 300 THEN
+    RETURN QUERY SELECT 2, 'מתקדם'::TEXT, 300 - xp;
+  ELSIF xp < 600 THEN
+    RETURN QUERY SELECT 3, 'מיומן'::TEXT, 600 - xp;
+  ELSIF xp < 1000 THEN
+    RETURN QUERY SELECT 4, 'מומחה'::TEXT, 1000 - xp;
+  ELSIF xp < 1500 THEN
+    RETURN QUERY SELECT 5, 'אמן'::TEXT, 1500 - xp;
+  ELSE
+    RETURN QUERY SELECT 6, 'מאסטר'::TEXT, 0;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;

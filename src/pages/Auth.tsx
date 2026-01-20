@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,11 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+
+  // Get redirect URL from query params (for short links)
+  const redirectUrl = searchParams.get('redirect');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +37,8 @@ const Auth = () => {
         title: 'התחברת בהצלחה!',
         description: 'ברוכים הבאים חזרה',
       });
-      navigate('/');
+      // Navigate to redirect URL if exists, otherwise home
+      navigate(redirectUrl || '/');
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -66,7 +71,8 @@ const Auth = () => {
         title: 'נרשמת בהצלחה!',
         description: 'ברוכים הבאים ל-Voicely',
       });
-      navigate('/');
+      // Navigate to redirect URL if exists, otherwise home
+      navigate(redirectUrl || '/');
     } catch (error: any) {
       toast({
         variant: 'destructive',
