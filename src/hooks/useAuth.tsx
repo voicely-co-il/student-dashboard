@@ -71,8 +71,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let isMounted = true;
 
     const initAuth = async () => {
+      console.log('[Auth] Starting initAuth...');
       try {
+        console.log('[Auth] Calling getSession...');
         const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('[Auth] getSession completed', { session: !!session, error });
 
         if (!isMounted) return;
 
@@ -96,13 +99,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsLoading(false);
         }
       } catch (err) {
-        console.error('Auth init error:', err);
+        console.error('[Auth] Init error:', err);
         if (isMounted) {
           setIsLoading(false);
         }
       }
     };
 
+    console.log('[Auth] useEffect running, calling initAuth');
     initAuth();
 
     // Listen for auth changes
