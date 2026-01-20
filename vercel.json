@@ -3,5 +3,27 @@
     { "source": "/s/:slug", "destination": "/short/:slug" },
     { "source": "/l/:slug", "destination": "/short/:slug" },
     { "source": "/r/:slug", "destination": "/short/:slug" }
+  ],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "voicely-student.vercel.app" }],
+      "destination": "/student"
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "voicely-teacher.vercel.app" }],
+      "destination": "/teacher"
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "voicely-chat.vercel.app" }],
+      "destination": "/student/chat"
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "voicely-chatbot.vercel.app" }],
+      "destination": "/chat"
+    }
   ]
 }
