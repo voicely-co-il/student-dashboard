@@ -9,6 +9,22 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Voicely Calendar IDs - mapped by lesson type
+const VOICELY_CALENDARS = {
+  one_on_one: "9e88f9bf71cfa6dc0ec7689c08ef80684430a12ed1a6aa09fb1befdf1968ae24@group.calendar.google.com",
+  group: "14009a9db57855b9eedf4d203624fab11690206bfef925334299e7b512244a29@group.calendar.google.com",
+  trial: "234bb6ad3c294ac2047bfd3b91c1a4c73b6245c81409b6592b7de448759e3395@group.calendar.google.com",
+  alternating: "095603f9667854e40fd1e6c547ad4a91f30014bae8e9ab517759e1afa4cf910c@group.calendar.google.com",
+} as const;
+
+// Calendar display names
+const CALENDAR_NAMES: Record<string, string> = {
+  one_on_one: "1:1 Voicely",
+  group: "קבוצות",
+  trial: "שיעורי ניסיון",
+  alternating: "לומד 1:1 לסירוגין",
+};
+
 // Intent types the AI can classify
 type Intent =
   | "crm_add_student"
@@ -344,15 +360,39 @@ async function getCalendarEvents(days = 7): Promise<any[]> {
   }
 }
 
-// Google Calendar: Create event
+// Google Calendar: Create event in the appropriate calendar based on lesson type
 async function createCalendarEvent(
   title: string,
   startTime: string,
   endTime: string,
-  description?: string
-): Promise<{ success: boolean; eventId?: string; error?: string }> {
+  description?: string,
+  lessonType?: string
+): Promise<{ success: boolean; eventId?: string; calendarName?: string; error?: string }> {
   const accessToken = await getGoogleAccessToken();
-  const calendarId = Deno.env.get("GOOGLE_CALENDAR_ID") || "primary";
+
+  // Select calendar based on lesson type
+  let calendarId: string;
+  let calendarName: string;
+
+  switch (lessonType) {
+    case "trial":
+      calendarId = VOICELY_CALENDARS.trial;
+      calendarName = CALENDAR_NAMES.trial;
+      break;
+    case "group":
+      calendarId = VOICELY_CALENDARS.group;
+      calendarName = CALENDAR_NAMES.group;
+      break;
+    case "alternating":
+      calendarId = VOICELY_CALENDARS.alternating;
+      calendarName = CALENDAR_NAMES.alternating;
+      break;
+    case "one_on_one":
+    default:
+      calendarId = VOICELY_CALENDARS.one_on_one;
+      calendarName = CALENDAR_NAMES.one_on_one;
+      break;
+  }
 
   if (!accessToken) {
     return { success: false, error: "Failed to authenticate with Google" };
@@ -379,7 +419,7 @@ async function createCalendarEvent(
     const data = await response.json();
 
     if (data.id) {
-      return { success: true, eventId: data.id };
+      return { success: true, eventId: data.id, calendarName };
     } else {
       return { success: false, error: data.error?.message || "Failed to create event" };
     }
@@ -701,7 +741,8 @@ Deno.serve(async (req) => {
               title,
               parsed.startTime,
               parsed.endTime,
-              `שיעור ${lessonTypeHebrew} עם ${student_name}`
+              `שיעור ${lessonTypeHebrew} עם ${student_name}`,
+              lesson_type // Pass lesson type to select correct calendar
             );
             console.log("Calendar event result:", result);
 
@@ -716,7 +757,7 @@ Deno.serve(async (req) => {
                 hour: "2-digit",
                 minute: "2-digit",
               });
-              context = `✅ פעולה הושלמה בהצלחה! שיעור ${lessonTypeHebrew} עם ${student_name} נקבע ליום ${formattedDate} בשעה ${formattedTime} והאירוע נוסף ליומן. אשר את ההצלחה למשתמש.`;
+              context = `✅ פעולה הושלמה בהצלחה! שיעור ${lessonTypeHebrew} עם ${student_name} נקבע ליום ${formattedDate} בשעה ${formattedTime} והאירוע נוסף ליומן "${result.calendarName}". אשר את ההצלחה למשתמש.`;
               actions.push({
                 type: "calendar_add",
                 label: `שיעור ${lessonTypeHebrew} עם ${student_name}`,

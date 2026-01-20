@@ -7,6 +7,22 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
+// Voicely Calendar IDs
+const VOICELY_CALENDARS = {
+  oneOnOne: "9e88f9bf71cfa6dc0ec7689c08ef80684430a12ed1a6aa09fb1befdf1968ae24@group.calendar.google.com",
+  groups: "14009a9db57855b9eedf4d203624fab11690206bfef925334299e7b512244a29@group.calendar.google.com",
+  trial: "234bb6ad3c294ac2047bfd3b91c1a4c73b6245c81409b6592b7de448759e3395@group.calendar.google.com",
+  alternating: "095603f9667854e40fd1e6c547ad4a91f30014bae8e9ab517759e1afa4cf910c@group.calendar.google.com",
+};
+
+// Calendar display names for responses
+const CALENDAR_NAMES: Record<string, string> = {
+  [VOICELY_CALENDARS.oneOnOne]: "1:1 Voicely",
+  [VOICELY_CALENDARS.groups]: "קבוצות",
+  [VOICELY_CALENDARS.trial]: "שיעורי ניסיון",
+  [VOICELY_CALENDARS.alternating]: "לומד 1:1 לסירוגין",
+};
+
 // Google Calendar: Get OAuth token using Service Account
 async function getGoogleAccessToken(): Promise<string | null> {
   const serviceEmail = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_EMAIL");
@@ -96,20 +112,14 @@ async function getGoogleAccessToken(): Promise<string | null> {
   }
 }
 
-// Get events from Google Calendar
-async function getCalendarEvents(
+// Get events from a single calendar
+async function getEventsFromCalendar(
+  accessToken: string,
+  calendarId: string,
   timeMin: string,
   timeMax: string,
   maxResults = 50
 ): Promise<any[]> {
-  const accessToken = await getGoogleAccessToken();
-  const calendarId = Deno.env.get("GOOGLE_CALENDAR_ID") || "primary";
-
-  if (!accessToken) {
-    console.error("Failed to get Google access token");
-    return [];
-  }
-
   try {
     const params = new URLSearchParams({
       timeMin,
@@ -129,7 +139,7 @@ async function getCalendarEvents(
     const data = await response.json();
 
     if (data.error) {
-      console.error("Calendar API error:", data.error);
+      console.error(`Calendar API error for ${calendarId}:`, data.error);
       return [];
     }
 
@@ -141,6 +151,8 @@ async function getCalendarEvents(
       description: event.description,
       location: event.location,
       status: event.status,
+      calendarId,
+      calendarName: CALENDAR_NAMES[calendarId] || "יומן",
       attendees: event.attendees?.map((a: any) => ({
         email: a.email,
         name: a.displayName,
@@ -148,9 +160,36 @@ async function getCalendarEvents(
       })),
     }));
   } catch (error) {
-    console.error("Get calendar events error:", error);
+    console.error(`Error fetching from calendar ${calendarId}:`, error);
     return [];
   }
+}
+
+// Get events from all Voicely calendars
+async function getAllCalendarEvents(
+  timeMin: string,
+  timeMax: string
+): Promise<any[]> {
+  const accessToken = await getGoogleAccessToken();
+
+  if (!accessToken) {
+    console.error("Failed to get Google access token");
+    return [];
+  }
+
+  // Fetch from all calendars in parallel
+  const calendarIds = Object.values(VOICELY_CALENDARS);
+  const results = await Promise.all(
+    calendarIds.map((calendarId) =>
+      getEventsFromCalendar(accessToken, calendarId, timeMin, timeMax)
+    )
+  );
+
+  // Combine and sort by start time
+  const allEvents = results.flat();
+  allEvents.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+  return allEvents;
 }
 
 Deno.serve(async (req) => {
@@ -192,7 +231,7 @@ Deno.serve(async (req) => {
 
     console.log(`Fetching events from ${timeMin} to ${timeMax}`);
 
-    const events = await getCalendarEvents(timeMin, timeMax);
+    const events = await getAllCalendarEvents(timeMin, timeMax);
 
     // Calculate stats
     const todayStr = today.toISOString().split("T")[0];
@@ -217,6 +256,7 @@ Deno.serve(async (req) => {
         todayEvents,
         weekCount: events.length,
         nextLesson,
+        calendars: Object.keys(CALENDAR_NAMES).length,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
