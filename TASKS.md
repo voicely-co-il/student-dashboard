@@ -299,7 +299,7 @@
 | פיצ'ר | DB Schema | Storage | Edge Function | UI Component | סטטוס |
 |-------|-----------|---------|---------------|--------------|-------|
 | **הודעות קוליות** | ✅ | ✅ bucket | ❌ transcribe | ❌ VoiceRecorder | 🟡 בתהליך |
-| **WhatsApp API** | ✅ | - | ❌ webhook | ❌ WhatsAppChat | 🟡 בתהליך |
+| **WhatsApp API** | ✅ | - | ✅ webhook + send | ✅ LiveChat | ✅ מוכן |
 | **Cal.com** | ✅ | - | ✅ webhook + booking | ✅ Embed Popup | ✅ מוכן |
 
 ### Environment Variables נדרשים
@@ -398,10 +398,12 @@ WHATSAPP_VERIFY_TOKEN=xxx
 
 ### WhatsApp
 - [ ] יצירת Meta App + Business Account
-- [ ] `whatsapp-webhook` Edge Function
-- [ ] `send-whatsapp` Edge Function
-- [ ] Template messages לאישור
-- [ ] עדכון LiveChat לתמיכה ב-WhatsApp
+- [x] `whatsapp-webhook` Edge Function - קבלת הודעות נכנסות
+- [x] `send-whatsapp` Edge Function - שליחת הודעות (text, template, interactive)
+- [x] עדכון LiveChat לתמיכה ב-WhatsApp (אייקון, שליחה)
+- [ ] הגדרת Webhook ב-Meta Developer Console
+- [ ] Template messages לאישור (lesson_reminder, booking_confirmation)
+- [ ] הגדרת Secrets ב-Supabase
 
 ### Cal.com
 - [ ] יצירת Event Types ב-Cal.com (20min, 45min, 60min)
