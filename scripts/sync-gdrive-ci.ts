@@ -321,6 +321,8 @@ async function syncTranscripts(fullSync: boolean = false) {
           "nextPageToken, files(id, name, mimeType, modifiedTime, parents)",
         pageSize: 100,
         pageToken,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
       });
 
       const files = response.data.files || [];

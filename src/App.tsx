@@ -14,6 +14,8 @@ import Auth from "./pages/Auth";
 import StudentDashboard from "./pages/student/StudentDashboard";
 import StudentChat from "./pages/student/StudentChat";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
+import MyStudents from "./pages/teacher/MyStudents";
+import StudentDetail from "./pages/teacher/StudentDetail";
 import TeacherChat from "./pages/TeacherChat";
 import ChatPage from "./pages/ChatPage";
 import LiveChat from "./pages/LiveChat";
@@ -131,7 +133,17 @@ const App = () => (
               element={
                 <TeacherProtectedRoute>
                   <AdminLayout>
-                    <div>רשימת תלמידים - בקרוב</div>
+                    <MyStudents />
+                  </AdminLayout>
+                </TeacherProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/student/:studentName"
+              element={
+                <TeacherProtectedRoute>
+                  <AdminLayout>
+                    <StudentDetail />
                   </AdminLayout>
                 </TeacherProtectedRoute>
               }

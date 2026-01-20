@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,7 @@ import { useCalendarBookings, formatLessonTime, formatLessonDate } from '@/hooks
 import { useNotionCRM } from '@/hooks/admin/useNotionCRM';
 
 const TeacherDashboard = () => {
+  const navigate = useNavigate();
   const { profile, signOut, isAdmin } = useAuth();
   const { data: calendarData, isLoading: calendarLoading } = useCalendarBookings();
   const { data: crmData, isLoading: crmLoading } = useNotionCRM();
@@ -124,7 +126,10 @@ const TeacherDashboard = () => {
 
         {/* Main Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="playful-shadow hover:shadow-lg transition-shadow cursor-pointer">
+          <Card
+            className="playful-shadow hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => navigate('/teacher/students')}
+          >
             <CardContent className="p-6 flex flex-col items-center text-center gap-4">
               <div className="w-16 h-16 rounded-full bg-voicely-green/10 flex items-center justify-center">
                 <Users className="w-8 h-8 text-voicely-green" />
@@ -138,7 +143,10 @@ const TeacherDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="playful-shadow hover:shadow-lg transition-shadow cursor-pointer">
+          <Card
+            className="playful-shadow hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => navigate('/teacher/search')}
+          >
             <CardContent className="p-6 flex flex-col items-center text-center gap-4">
               <div className="w-16 h-16 rounded-full bg-voicely-orange/10 flex items-center justify-center">
                 <Search className="w-8 h-8 text-voicely-orange" />
