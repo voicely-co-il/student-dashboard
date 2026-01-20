@@ -264,11 +264,27 @@ async function syncTranscripts(fullSync: boolean = false) {
   let filesSkipped = 0;
 
   try {
-    // Get existing transcripts for incremental sync
+    // Get last successful sync timestamp for incremental sync
+    let lastSyncTime: string | null = null;
     let existingFileIds: Set<string> = new Set();
     let existingModifiedTimes: Map<string, string> = new Map();
 
     if (!fullSync) {
+      // Get the last successful sync completion time
+      const { data: lastSync } = await supabase
+        .from("gdrive_sync_log")
+        .select("completed_at")
+        .eq("status", "completed")
+        .order("completed_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (lastSync?.completed_at) {
+        lastSyncTime = lastSync.completed_at;
+        console.log(`📅 Last successful sync: ${lastSyncTime}`);
+      }
+
+      // Also get existing file IDs for duplicate checking
       const { data: existing } = await supabase
         .from("transcripts")
         .select("gdrive_file_id, gdrive_modified_at");
@@ -283,15 +299,24 @@ async function syncTranscripts(fullSync: boolean = false) {
       console.log(`📚 Found ${existingFileIds.size} existing transcripts in DB`);
     }
 
-    // Search for all transcript documents across the entire Drive
+    // Build Google Drive query - only fetch files modified since last sync
+    let driveQuery = "name contains 'Transcript:' and mimeType = 'application/vnd.google-apps.document'";
+
+    if (!fullSync && lastSyncTime) {
+      // Format for Google Drive API: RFC 3339 timestamp
+      driveQuery += ` and modifiedTime > '${lastSyncTime}'`;
+      console.log(`🔍 Searching for files modified after ${lastSyncTime}...`);
+    } else {
+      console.log("🔍 Searching Google Drive for ALL transcripts...");
+    }
+
+    // Search for transcript documents
     let pageToken: string | undefined;
     const allFiles: any[] = [];
 
-    console.log("🔍 Searching Google Drive for transcripts...");
-
     do {
       const response = await drive.files.list({
-        q: "name contains 'Transcript:' and mimeType = 'application/vnd.google-apps.document'",
+        q: driveQuery,
         fields:
           "nextPageToken, files(id, name, mimeType, modifiedTime, parents)",
         pageSize: 100,
@@ -304,7 +329,26 @@ async function syncTranscripts(fullSync: boolean = false) {
       pageToken = response.data.nextPageToken || undefined;
     } while (pageToken);
 
-    console.log(`📄 Found ${allFiles.length} transcript files in Google Drive`);
+    console.log(`📄 Found ${allFiles.length} new/modified transcript files`);
+
+    // If no new files, exit early
+    if (allFiles.length === 0) {
+      console.log("\n✅ No new transcripts to sync!");
+
+      await supabase
+        .from("gdrive_sync_log")
+        .update({
+          status: "completed",
+          files_processed: 0,
+          files_added: 0,
+          files_updated: 0,
+          files_failed: 0,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", syncLog.id);
+
+      return;
+    }
 
     // Process in batches
     for (let i = 0; i < allFiles.length; i += CONFIG.BATCH_SIZE) {
@@ -314,20 +358,15 @@ async function syncTranscripts(fullSync: boolean = false) {
         filesProcessed++;
 
         try {
-          // For incremental sync, check if file was modified
-          if (!fullSync && existingFileIds.has(file.id)) {
-            const existingModTime = existingModifiedTimes.get(file.id);
-            if (existingModTime === file.modifiedTime) {
-              filesSkipped++;
-              continue;
-            }
-            console.log(`🔄 Updating (modified): ${file.name}`);
-          } else if (!fullSync && existingFileIds.has(file.id)) {
-            filesSkipped++;
-            continue;
+          // Check if this is an update or new file
+          const isUpdate = existingFileIds.has(file.id);
+          if (isUpdate) {
+            console.log(`🔄 Updating: ${file.name}`);
+          } else {
+            console.log(`➕ Adding: ${file.name}`);
           }
 
-          console.log(`📝 Processing (${filesProcessed}/${allFiles.length}): ${file.name}`);
+          console.log(`   (${filesProcessed}/${allFiles.length})`);
 
           // Download file content
           const content = await drive.files.export({
