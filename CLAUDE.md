@@ -284,3 +284,42 @@ const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_CRM_D
 
 ## Related Projects
 - **MAMA (Senior Dashboard):** /Users/mit/Documents/GitHub/MAMA/src
+
+---
+
+## Troubleshooting Log
+
+### Supabase Auth - Infinite Loading / getSession() Hangs (Jan 2026)
+
+**תסמינים:**
+- האפליקציה תקועה על ספינר "טוען..." לנצח
+- `supabase.auth.getSession()` לא חוזר
+- בקונסול רואים רק `[Auth] Calling getSession...` בלי תשובה
+
+**סיבה:**
+Web Locks Deadlock - באג מתועד ב-Supabase JS SDK שמשתמש ב-Web Locks API ויכול ליצור deadlock.
+ראה: https://github.com/supabase/supabase-js/issues/1594
+
+**פתרון:**
+הוספת no-op lock function ב-`src/integrations/supabase/client.ts`:
+
+```typescript
+// No-op lock to prevent Web Locks deadlock issue
+const noOpLock = async <T>(_name: string, _acquireTimeout: number, fn: () => Promise<T>): Promise<T> => {
+  return await fn();
+};
+
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+    lock: noOpLock,  // <-- זה הפתרון
+  }
+});
+```
+
+**הערות:**
+- הבעיה יכולה לקרות גם עם `getUser()` ולא רק `getSession()`
+- לפעמים מתרחש רק בדפדפנים מסוימים (במיוחד Chrome Android)
+- פתרון זמני נוסף: מחיקת cookies של האתר
