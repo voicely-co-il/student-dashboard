@@ -7,6 +7,7 @@ import {
   Shield,
   MessageSquare,
   Radio,
+  Gauge,
 } from 'lucide-react';
 
 const navItems = [
@@ -16,6 +17,7 @@ const navItems = [
   { href: '/teacher/chat', label: 'צ\'אט מורה', icon: MessageSquare },
   { href: '/admin/live-chat', label: 'צ\'אט חי', icon: Radio },
   { href: '/admin/analytics', label: 'אנליטיקס', icon: BarChart3 },
+  { href: '/admin/resources', label: 'משאבים', icon: Gauge },
 ];
 
 const AdminNavBar = () => {

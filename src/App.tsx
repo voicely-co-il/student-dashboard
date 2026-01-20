@@ -18,6 +18,7 @@ import TeacherChat from "./pages/TeacherChat";
 import ChatPage from "./pages/ChatPage";
 import LiveChat from "./pages/LiveChat";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminResources from "./pages/admin/AdminResources";
 import ShortLinkResolver from "./pages/ShortLinkResolver";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -171,6 +172,16 @@ const App = () => (
                 <AdminProtectedRoute>
                   <AdminLayout>
                     <LiveChat />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/resources"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminResources />
                   </AdminLayout>
                 </AdminProtectedRoute>
               }
