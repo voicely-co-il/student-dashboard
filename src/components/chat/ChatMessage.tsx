@@ -44,8 +44,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
         {isUser ? <User className="w-4 h-4 sm:w-5 sm:h-5" /> : <Bot className="w-4 h-4 sm:w-5 sm:h-5" />}
       </div>
 
-      <div className="flex-1 space-y-2 min-w-0">
-        <p className="text-slate-800 dark:text-slate-100 whitespace-pre-wrap leading-relaxed text-sm sm:text-base break-words">
+      <div className="flex-1 space-y-2 min-w-0 text-right">
+        <p className="text-slate-800 dark:text-slate-100 whitespace-pre-wrap leading-relaxed text-sm sm:text-base break-words text-right">
           {message.content}
         </p>
 
@@ -57,7 +57,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </div>
         )}
 
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-right">
           {message.timestamp.toLocaleTimeString("he-IL", {
             hour: "2-digit",
             minute: "2-digit",

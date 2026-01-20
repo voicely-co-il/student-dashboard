@@ -75,12 +75,19 @@ Return JSON in this exact format:
     "date": "date mentioned (e.g., tomorrow, מחר, 21/1, יום שני)",
     "time": "time mentioned (e.g., 15:00, 3pm, בשעה 10)",
     "phone": "phone number if mentioned",
-    "search_query": "search terms if relevant"
+    "search_query": "search terms if relevant",
+    "lesson_type": "trial | one_on_one | group | null (detect from: שיעור ניסיון/trial, שיעור פרטי/1:1/אחד על אחד, קבוצה/קבוצתי/group)"
   },
   "confidence": 0.0-1.0
 }
 
-Important: Extract student_name from phrases like "lesson with Dana", "שיעור עם דנה", "for student X".
+Important:
+- Extract student_name from phrases like "lesson with Dana", "שיעור עם דנה", "for student X".
+- lesson_type detection:
+  - "trial" = שיעור ניסיון, trial lesson, ניסיון
+  - "one_on_one" = שיעור פרטי, 1:1, אחד על אחד, פרטי
+  - "group" = קבוצה, קבוצתי, group
+  - null = not specified (need to ask)
 Return ONLY valid JSON, no markdown or extra text.`;
 
   try {
@@ -652,20 +659,49 @@ Deno.serve(async (req) => {
       }
 
       case "calendar_add_event": {
-        const { student_name, date, time } = intent.entities;
-        console.log("Calendar add event - entities:", { student_name, date, time });
+        const { student_name, date, time, lesson_type } = intent.entities;
+        console.log("Calendar add event - entities:", { student_name, date, time, lesson_type });
 
-        // Check if we have enough info to create the event
-        if (student_name && (date || time)) {
+        // Build list of missing information
+        const missing: string[] = [];
+        if (!student_name) missing.push("שם התלמיד/ה");
+        if (!date && !time) missing.push("תאריך ושעה");
+        if (!lesson_type) missing.push("סוג השיעור (ניסיון / פרטי 1:1 / קבוצה)");
+
+        // If we're missing information, ask for it
+        if (missing.length > 0) {
+          const lessonTypeHebrew = lesson_type === "trial" ? "ניסיון" :
+            lesson_type === "one_on_one" ? "פרטי" :
+            lesson_type === "group" ? "קבוצתי" : null;
+
+          let contextParts = [`המורה רוצה לקבוע שיעור`];
+          if (student_name) contextParts.push(`עם ${student_name}`);
+          if (lessonTypeHebrew) contextParts.push(`(${lessonTypeHebrew})`);
+          if (date) contextParts.push(`בתאריך ${date}`);
+          if (time) contextParts.push(`בשעה ${time}`);
+
+          context = `${contextParts.join(" ")}.\n\nחסר: ${missing.join(", ")}.\n\nשאל בצורה טבעית וידידותית על הפרטים החסרים. אם חסר סוג שיעור, שאל: "איזה סוג שיעור? ניסיון, פרטי, או קבוצתי?"`;
+          actions.push({
+            type: "calendar_add",
+            label: "קביעת שיעור",
+            status: "pending",
+          });
+        } else {
+          // We have all the information - create the event
           const parsed = parseHebrewDateTime(date, time);
           console.log("Parsed date/time:", parsed);
+
           if (parsed) {
-            const title = `שיעור - ${student_name}`;
+            // Determine calendar and title based on lesson type
+            const lessonTypeHebrew = lesson_type === "trial" ? "ניסיון" :
+              lesson_type === "one_on_one" ? "פרטי" : "קבוצתי";
+            const title = `שיעור ${lessonTypeHebrew} - ${student_name}`;
+
             const result = await createCalendarEvent(
               title,
               parsed.startTime,
               parsed.endTime,
-              `שיעור קול עם ${student_name}`
+              `שיעור ${lessonTypeHebrew} עם ${student_name}`
             );
             console.log("Calendar event result:", result);
 
@@ -680,10 +716,10 @@ Deno.serve(async (req) => {
                 hour: "2-digit",
                 minute: "2-digit",
               });
-              context = `✅ פעולה הושלמה בהצלחה! השיעור עם ${student_name} נקבע ליום ${formattedDate} בשעה ${formattedTime} והאירוע נוסף ליומן Google. אשר את ההצלחה למשתמש.`;
+              context = `✅ פעולה הושלמה בהצלחה! שיעור ${lessonTypeHebrew} עם ${student_name} נקבע ליום ${formattedDate} בשעה ${formattedTime} והאירוע נוסף ליומן. אשר את ההצלחה למשתמש.`;
               actions.push({
                 type: "calendar_add",
-                label: `שיעור עם ${student_name}`,
+                label: `שיעור ${lessonTypeHebrew} עם ${student_name}`,
                 status: "completed",
               });
             } else {
@@ -695,20 +731,13 @@ Deno.serve(async (req) => {
               });
             }
           } else {
-            context = `המשתמש רוצה לקבוע שיעור עם ${student_name}. בקש תאריך ושעה מדויקים.`;
+            context = `לא הצלחתי לפענח את התאריך/שעה. בקש מהמורה תאריך ושעה מדויקים יותר.`;
             actions.push({
               type: "calendar_add",
               label: "קביעת שיעור",
               status: "pending",
             });
           }
-        } else {
-          context = `המשתמש רוצה לקבוע שיעור${student_name ? ` עם ${student_name}` : ""}${date ? ` בתאריך ${date}` : ""}${time ? ` בשעה ${time}` : ""}. בקש את הפרטים החסרים (שם תלמיד, תאריך ושעה).`;
-          actions.push({
-            type: "calendar_add",
-            label: "קביעת שיעור",
-            status: "pending",
-          });
         }
         break;
       }
