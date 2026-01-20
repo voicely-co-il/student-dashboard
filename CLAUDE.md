@@ -37,6 +37,69 @@
 - **Vercel:** https://vercel.com/voicelys-projects-bd7b93d9/student-dashboard
 - **Organization:** voicely-co-il
 
+---
+
+## Git & Deployment Configuration
+
+### Git Settings (Local to this project)
+```bash
+# Project-specific git identity
+git config user.name "compumit"
+git config user.email "info@compumit.com"
+
+# Remote
+git remote set-url origin git@github.com:voicely-co-il/student-dashboard.git
+```
+
+### GitHub Access
+- **Organization:** voicely-co-il
+- **Repository:** student-dashboard
+- **SSH Key:** Use the SSH key configured for `voicely-co-il` org
+- **Clone URL:** `git@github.com:voicely-co-il/student-dashboard.git`
+
+### Vercel Project
+- **Project Name:** voicely-il
+- **Team:** voicelys-projects-bd7b93d9
+- **Main Domain:** https://voicely-il.vercel.app
+- **Auto-Deploy:** Push to `main` triggers production deploy
+- **Vercel Token:** Stored in `.env` as `VERCEL_TOKEN`
+
+### Module Domains
+| מודול | דומיין | Route |
+|-------|--------|-------|
+| תלמיד | https://voicely-student.vercel.app | `/student` |
+| מורה | https://voicely-teacher.vercel.app | `/teacher` |
+| צ'אט | https://voicely-chat.vercel.app | `/student/chat` |
+| צ'אטבוט | https://voicely-chatbot.vercel.app | `/chat` |
+
+### Supabase Project
+- **Project ID:** jldfxkbczzxawdqsznze
+- **Region:** (check dashboard)
+- **CLI Config:** `supabase link --project-ref jldfxkbczzxawdqsznze`
+
+### Important: Avoid Cross-Project Conflicts
+**CRITICAL:** When working in this project:
+1. **Always verify working directory** before git/supabase commands
+2. **Use project-specific credentials** - never use global defaults
+3. **Check `git remote -v`** before pushing
+4. **This project path:** `/Users/mit/Documents/GitHub/Voicely/Student Dash`
+5. **Do NOT confuse with MAMA project:** `/Users/mit/Documents/GitHub/MAMA`
+
+### Deployment Commands
+```bash
+# Deploy to production (via git)
+git add . && git commit -m "message" && git push origin main
+
+# Direct Vercel deploy (if needed)
+vercel --prod
+
+# Supabase migrations
+supabase db push
+supabase gen types typescript --project-id jldfxkbczzxawdqsznze > src/integrations/supabase/types.ts
+```
+
+---
+
 ## Project Structure
 ```
 src/
