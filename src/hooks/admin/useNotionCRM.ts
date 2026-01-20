@@ -3,20 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface StudentBreakdown {
   oneOnOne: {
-    regular: number;
+    newStudents: number;   // Less than 3 months
+    veterans: number;      // 3+ months
     alternating: number;
     total: number;
   };
   groups: {
     thursday: number;
     sunday: number;
+    newStudents: number;   // Less than 3 months
+    veterans: number;      // 3+ months
     total: number;
   };
-  veterans: {
-    marked: number;
-    calculated: number;
-    total: number;
-  };
+  veteransMarked: number;  // Explicitly marked with "תלמידים ותיקים" status
 }
 
 export interface NotionCRMStats {

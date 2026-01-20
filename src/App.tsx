@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import StudentProtectedRoute from "@/components/auth/StudentProtectedRoute";
 import TeacherProtectedRoute from "@/components/auth/TeacherProtectedRoute";
 import AdminProtectedRoute from "@/components/admin/AdminProtectedRoute";
+import AdminLayout from "@/components/admin/AdminLayout";
 
 // Pages
 import Auth from "./pages/Auth";
@@ -81,7 +82,9 @@ const App = () => (
               path="/student"
               element={
                 <StudentProtectedRoute>
-                  <StudentDashboard />
+                  <AdminLayout>
+                    <StudentDashboard />
+                  </AdminLayout>
                 </StudentProtectedRoute>
               }
             />
@@ -89,7 +92,9 @@ const App = () => (
               path="/student/chat"
               element={
                 <StudentProtectedRoute>
-                  <TeacherChat />
+                  <AdminLayout>
+                    <TeacherChat />
+                  </AdminLayout>
                 </StudentProtectedRoute>
               }
             />
@@ -97,7 +102,9 @@ const App = () => (
               path="/student/live"
               element={
                 <StudentProtectedRoute>
-                  <LiveChat />
+                  <AdminLayout>
+                    <LiveChat />
+                  </AdminLayout>
                 </StudentProtectedRoute>
               }
             />
@@ -109,7 +116,9 @@ const App = () => (
               path="/teacher"
               element={
                 <TeacherProtectedRoute>
-                  <TeacherDashboard />
+                  <AdminLayout>
+                    <TeacherDashboard />
+                  </AdminLayout>
                 </TeacherProtectedRoute>
               }
             />
@@ -117,7 +126,9 @@ const App = () => (
               path="/teacher/students"
               element={
                 <TeacherProtectedRoute>
-                  <div>רשימת תלמידים - בקרוב</div>
+                  <AdminLayout>
+                    <div>רשימת תלמידים - בקרוב</div>
+                  </AdminLayout>
                 </TeacherProtectedRoute>
               }
             />
@@ -125,7 +136,9 @@ const App = () => (
               path="/teacher/search"
               element={
                 <TeacherProtectedRoute>
-                  <div>חיפוש AI - בקרוב</div>
+                  <AdminLayout>
+                    <div>חיפוש AI - בקרוב</div>
+                  </AdminLayout>
                 </TeacherProtectedRoute>
               }
             />
@@ -145,7 +158,9 @@ const App = () => (
               path="/admin/analytics"
               element={
                 <AdminProtectedRoute>
-                  <AdminAnalytics />
+                  <AdminLayout>
+                    <AdminAnalytics />
+                  </AdminLayout>
                 </AdminProtectedRoute>
               }
             />

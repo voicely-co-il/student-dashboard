@@ -138,52 +138,86 @@ const AnalyticsOverview = () => {
               פירוט תלמידים (מ-Notion CRM)
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {/* Active 1:1 */}
-              <div className="p-4 rounded-xl bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
-                <div className="flex items-center gap-2 mb-2">
-                  <UserCheck className="w-4 h-4 text-green-600" />
-                  <span className="text-sm font-medium text-green-800 dark:text-green-200">לומדים 1:1</span>
-                </div>
-                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                  {crmData.activeStudents.breakdown.oneOnOne.total}
-                </p>
-                {crmData.activeStudents.breakdown.oneOnOne.alternating > 0 && (
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                    ({crmData.activeStudents.breakdown.oneOnOne.alternating} לסירוגין)
+          <CardContent className="space-y-6">
+            {/* Active Students Section */}
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">תלמידים פעילים ({crmData.activeStudents.total})</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* 1:1 New Students */}
+                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <UserCheck className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">1:1 חדשים</span>
+                  </div>
+                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                    {crmData.activeStudents.breakdown.oneOnOne.newStudents}
                   </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    פחות מ-3 חודשים
+                  </p>
+                </div>
+
+                {/* 1:1 Veterans */}
+                <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-medium text-amber-800 dark:text-amber-200">1:1 ותיקים</span>
+                  </div>
+                  <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                    {crmData.activeStudents.breakdown.oneOnOne.veterans}
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    3+ חודשים
+                  </p>
+                </div>
+
+                {/* Groups New */}
+                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <UsersRound className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800 dark:text-blue-200">קבוצות חדשים</span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {crmData.activeStudents.breakdown.groups.newStudents}
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    חמישי + ראשון
+                  </p>
+                </div>
+
+                {/* Groups Veterans */}
+                <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="w-4 h-4 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-800 dark:text-orange-200">קבוצות ותיקים</span>
+                  </div>
+                  <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">
+                    {crmData.activeStudents.breakdown.groups.veterans}
+                  </p>
+                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                    3+ חודשים
+                  </p>
+                </div>
+              </div>
+
+              {/* Details row */}
+              <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                <span>סה"כ 1:1: {crmData.activeStudents.breakdown.oneOnOne.total}</span>
+                <span>|</span>
+                <span>קבוצת חמישי: {crmData.activeStudents.breakdown.groups.thursday}</span>
+                <span>|</span>
+                <span>קבוצת ראשון: {crmData.activeStudents.breakdown.groups.sunday}</span>
+                {crmData.activeStudents.breakdown.veteransMarked > 0 && (
+                  <>
+                    <span>|</span>
+                    <span>מסומנים ותיקים: {crmData.activeStudents.breakdown.veteransMarked}</span>
+                  </>
                 )}
               </div>
+            </div>
 
-              {/* Groups */}
-              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
-                <div className="flex items-center gap-2 mb-2">
-                  <UsersRound className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">קבוצות</span>
-                </div>
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                  {crmData.activeStudents.breakdown.groups.total}
-                </p>
-                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                  חמישי: {crmData.activeStudents.breakdown.groups.thursday} | ראשון: {crmData.activeStudents.breakdown.groups.sunday}
-                </p>
-              </div>
-
-              {/* Veterans */}
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
-                <div className="flex items-center gap-2 mb-2">
-                  <Award className="w-4 h-4 text-amber-600" />
-                  <span className="text-sm font-medium text-amber-800 dark:text-amber-200">ותיקים (3+ חודשים)</span>
-                </div>
-                <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-                  {crmData.activeStudents.breakdown.veterans.total}
-                </p>
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                  מסומנים: {crmData.activeStudents.breakdown.veterans.marked}
-                </p>
-              </div>
-
+            {/* Other Categories */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {/* Paused */}
               <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 mb-2">
@@ -199,7 +233,7 @@ const AnalyticsOverview = () => {
               <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800">
                 <div className="flex items-center gap-2 mb-2">
                   <GraduationCap className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-800 dark:text-purple-200">סיימו</span>
+                  <span className="text-sm font-medium text-purple-800 dark:text-purple-200">סיימו ללמוד</span>
                 </div>
                 <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                   {crmData.completedStudents}
@@ -210,10 +244,24 @@ const AnalyticsOverview = () => {
               <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800">
                 <div className="flex items-center gap-2 mb-2">
                   <UserPlus className="w-4 h-4 text-cyan-600" />
-                  <span className="text-sm font-medium text-cyan-800 dark:text-cyan-200">לידים</span>
+                  <span className="text-sm font-medium text-cyan-800 dark:text-cyan-200">לידים/מתעניינים</span>
                 </div>
                 <p className="text-2xl font-bold text-cyan-700 dark:text-cyan-300">
                   {crmData.leads}
+                </p>
+                <p className="text-xs text-cyan-600 dark:text-cyan-400 mt-1">
+                  בתהליך מכירה
+                </p>
+              </div>
+
+              {/* Not Relevant */}
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-red-500" />
+                  <span className="text-sm font-medium text-red-800 dark:text-red-200">לא רלוונטי</span>
+                </div>
+                <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  {crmData.notRelevant}
                 </p>
               </div>
             </div>

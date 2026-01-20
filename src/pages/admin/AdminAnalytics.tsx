@@ -8,7 +8,6 @@ import {
   Lightbulb,
   Target,
   Megaphone,
-  ArrowRight,
   RefreshCw
 } from 'lucide-react';
 import AnalyticsOverview from '@/components/admin/analytics/AnalyticsOverview';
@@ -63,23 +62,15 @@ const AdminAnalytics = () => {
               ניתוח עמוק של 828+ שיחות מתומללות
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshViews}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={`w-4 h-4 ms-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'מעדכן...' : 'עדכן נתונים'}
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <a href="/">
-                <ArrowRight className="w-4 h-4 ms-2" />
-                חזרה לדשבורד
-              </a>
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefreshViews}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`w-4 h-4 ms-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'מעדכן...' : 'עדכן נתונים'}
+          </Button>
         </div>
 
         {/* Tabs */}

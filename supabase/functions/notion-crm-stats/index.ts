@@ -53,20 +53,19 @@ interface NotionPage {
 
 interface StudentBreakdown {
   oneOnOne: {
-    regular: number;
+    newStudents: number;   // Less than 3 months
+    veterans: number;      // 3+ months
     alternating: number;
     total: number;
   };
   groups: {
     thursday: number;
     sunday: number;
+    newStudents: number;   // Less than 3 months
+    veterans: number;      // 3+ months
     total: number;
   };
-  veterans: {
-    marked: number;      // Explicitly marked as veteran
-    calculated: number;  // Over 3 months (from active students)
-    total: number;
-  };
+  veteransMarked: number;  // Explicitly marked with "תלמידים ותיקים" status
 }
 
 interface CRMStats {
@@ -160,13 +159,15 @@ serve(async (req) => {
     // Initialize counters
     const statusCounts: Record<string, { count: number; category: string }> = {};
 
-    // Detailed breakdown
-    let oneOnOneRegular = 0;
+    // Detailed breakdown - separated by new (<3 months) and veteran (3+ months)
+    let oneOnOneNew = 0;
+    let oneOnOneVeteran = 0;
     let oneOnOneAlternating = 0;
-    let groupThursday = 0;
-    let groupSunday = 0;
-    let veteransMarked = 0;
-    let veteransCalculated = 0;
+    let groupThursdayNew = 0;
+    let groupThursdayVeteran = 0;
+    let groupSundayNew = 0;
+    let groupSundayVeteran = 0;
+    let veteransMarked = 0;  // Explicitly marked with status
     let pausedCount = 0;
     let completedCount = 0;
     let leadsCount = 0;
@@ -176,6 +177,7 @@ serve(async (req) => {
       const statusProp = page.properties["סטטוס"];
       const status = statusProp?.status?.name || "unknown";
       const category = getCategory(status);
+      const isVeteran = isVeteranByDate(page);
 
       // Count individual statuses with category
       if (!statusCounts[status]) {
@@ -183,31 +185,40 @@ serve(async (req) => {
       }
       statusCounts[status].count++;
 
-      // Track if this is an active student (for veteran calculation)
-      let isActiveStudent = false;
-
-      // Categorize and count
+      // Categorize and count with new/veteran split
       switch (category) {
         case "oneOnOne":
-          oneOnOneRegular++;
-          isActiveStudent = true;
+          if (isVeteran) {
+            oneOnOneVeteran++;
+          } else {
+            oneOnOneNew++;
+          }
           break;
         case "oneOnOneAlternating":
           oneOnOneAlternating++;
-          isActiveStudent = true;
+          // Also count as veteran or new
+          if (isVeteran) {
+            oneOnOneVeteran++;
+          } else {
+            oneOnOneNew++;
+          }
           break;
         case "groupThursday":
-          groupThursday++;
-          isActiveStudent = true;
+          if (isVeteran) {
+            groupThursdayVeteran++;
+          } else {
+            groupThursdayNew++;
+          }
           break;
         case "groupSunday":
-          groupSunday++;
-          isActiveStudent = true;
+          if (isVeteran) {
+            groupSundayVeteran++;
+          } else {
+            groupSundayNew++;
+          }
           break;
         case "veterans":
           veteransMarked++;
-          // Veterans are also active students
-          isActiveStudent = true;
           break;
         case "paused":
           pausedCount++;
@@ -222,18 +233,16 @@ serve(async (req) => {
           notRelevantCount++;
           break;
       }
-
-      // Check if active student is a veteran by date (3+ months)
-      if (isActiveStudent && category !== "veterans" && isVeteranByDate(page)) {
-        veteransCalculated++;
-      }
     }
 
     // Calculate totals
-    const totalOneOnOne = oneOnOneRegular + oneOnOneAlternating;
-    const totalGroups = groupThursday + groupSunday;
+    const totalOneOnOne = oneOnOneNew + oneOnOneVeteran;
+    const totalGroupThursday = groupThursdayNew + groupThursdayVeteran;
+    const totalGroupSunday = groupSundayNew + groupSundayVeteran;
+    const totalGroups = totalGroupThursday + totalGroupSunday;
+    const totalGroupsNew = groupThursdayNew + groupSundayNew;
+    const totalGroupsVeteran = groupThursdayVeteran + groupSundayVeteran;
     const totalActiveStudents = totalOneOnOne + totalGroups + veteransMarked;
-    const totalVeterans = veteransMarked + veteransCalculated;
 
     // Sort status breakdown by count
     const statusBreakdown = Object.entries(statusCounts)
@@ -250,20 +259,19 @@ serve(async (req) => {
         total: totalActiveStudents,
         breakdown: {
           oneOnOne: {
-            regular: oneOnOneRegular,
+            newStudents: oneOnOneNew,
+            veterans: oneOnOneVeteran,
             alternating: oneOnOneAlternating,
             total: totalOneOnOne,
           },
           groups: {
-            thursday: groupThursday,
-            sunday: groupSunday,
+            thursday: totalGroupThursday,
+            sunday: totalGroupSunday,
+            newStudents: totalGroupsNew,
+            veterans: totalGroupsVeteran,
             total: totalGroups,
           },
-          veterans: {
-            marked: veteransMarked,
-            calculated: veteransCalculated,
-            total: totalVeterans,
-          },
+          veteransMarked: veteransMarked,
         },
       },
       pausedStudents: pausedCount,
