@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -34,20 +34,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const initialized = useRef(false);
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, role, name, email, avatar, teacher')
-      .eq('id', userId)
-      .single();
+  const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, role, name, email, avatar, teacher')
+        .eq('id', userId)
+        .single();
 
-    if (error) {
-      console.error('Error fetching user profile:', error);
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+
+      return data as UserProfile;
+    } catch (err) {
+      console.error('Exception fetching profile:', err);
       return null;
     }
-
-    return data as UserProfile;
   };
 
   const refetchProfile = async () => {
@@ -58,36 +64,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Get initial session
-    console.log('[Auth] Starting getSession...');
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('[Auth] getSession result:', session ? 'Has session' : 'No session');
-      setSession(session);
-      setUser(session?.user ?? null);
+    // Prevent double initialization
+    if (initialized.current) return;
+    initialized.current = true;
 
-      if (session?.user) {
-        console.log('[Auth] Fetching profile for:', session.user.id);
-        const profileData = await fetchProfile(session.user.id);
-        console.log('[Auth] Profile result:', profileData);
-        setProfile(profileData);
-      }
+    let isMounted = true;
 
-      console.log('[Auth] Setting isLoading to false');
-      setIsLoading(false);
-    }).catch((error) => {
-      console.error('[Auth] getSession error:', error);
-      setIsLoading(false);
-    });
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+        if (!isMounted) return;
+
+        if (error) {
+          console.error('getSession error:', error);
+          setIsLoading(false);
+          return;
+        }
+
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
           const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
+          if (isMounted) {
+            setProfile(profileData);
+          }
+        }
+
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('Auth init error:', err);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (!isMounted) return;
+
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+          const profileData = await fetchProfile(session.user.id);
+          if (isMounted) {
+            setProfile(profileData);
+          }
         } else {
           setProfile(null);
         }
@@ -96,7 +126,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
