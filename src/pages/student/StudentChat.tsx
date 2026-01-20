@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { QuickActions } from "@/components/chat/QuickActions";
-import { ArrowRight, Trash2, Sparkles, Brain, Loader2 } from "lucide-react";
+import { MemoryPanel } from "@/components/chat/MemoryPanel";
+import { ArrowRight, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const StudentChat = () => {
@@ -15,7 +16,6 @@ const StudentChat = () => {
     isLoadingSession,
     sendMessage,
     clearHistory,
-    memoriesCount
   } = useStudentChat();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -60,27 +60,23 @@ const StudentChat = () => {
                   <Sparkles className="h-5 w-5 text-voicely-green" />
                   עוזר הלמידה שלי
                 </h1>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  {memoriesCount > 0 && (
-                    <>
-                      <Brain className="h-3 w-3" />
-                      <span>{memoriesCount} זיכרונות</span>
-                      <span className="mx-1">•</span>
-                    </>
-                  )}
+                <p className="text-xs text-muted-foreground">
                   שאל אותי על טכניקה או השיעורים שלך
                 </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearHistory}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4 ms-1" />
-              נקה
-            </Button>
+            <div className="flex items-center gap-1">
+              <MemoryPanel />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearHistory}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 ms-1" />
+                נקה
+              </Button>
+            </div>
           </div>
         </div>
       </header>

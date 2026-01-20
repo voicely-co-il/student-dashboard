@@ -8,7 +8,8 @@ import {
   Lightbulb,
   Target,
   Megaphone,
-  RefreshCw
+  RefreshCw,
+  Star
 } from 'lucide-react';
 import AnalyticsOverview from '@/components/admin/analytics/AnalyticsOverview';
 import TrendsDashboard from '@/components/admin/analytics/TrendsDashboard';
@@ -16,6 +17,7 @@ import MethodologyAnalyzer from '@/components/admin/analytics/MethodologyAnalyze
 import StudentArchetypes from '@/components/admin/analytics/StudentArchetypes';
 import SuccessPatterns from '@/components/admin/analytics/SuccessPatterns';
 import MarketingInsights from '@/components/admin/analytics/MarketingInsights';
+import TestimonialTool from '@/components/admin/analytics/TestimonialTool';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -49,6 +51,7 @@ const AdminAnalytics = () => {
     { id: 'students', label: 'ארכיטיפי תלמידים', icon: Users },
     { id: 'success', label: 'דפוסי הצלחה', icon: Target },
     { id: 'marketing', label: 'תוכן שיווקי', icon: Megaphone },
+    { id: 'testimonials', label: 'חוות דעת', icon: Star },
   ];
 
   return (
@@ -111,6 +114,10 @@ const AdminAnalytics = () => {
 
           <TabsContent value="marketing" className="mt-0">
             <MarketingInsights />
+          </TabsContent>
+
+          <TabsContent value="testimonials" className="mt-0">
+            <TestimonialTool />
           </TabsContent>
         </Tabs>
       </div>

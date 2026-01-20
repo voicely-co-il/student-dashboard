@@ -20,6 +20,7 @@ import LiveChat from "./pages/LiveChat";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminResources from "./pages/admin/AdminResources";
 import AdminMarketing from "./pages/admin/AdminMarketing";
+import AdminMemoryDebug from "./pages/admin/AdminMemoryDebug";
 import ShortLinkResolver from "./pages/ShortLinkResolver";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -193,6 +194,16 @@ const App = () => (
                 <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminMarketing />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/memory"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminMemoryDebug />
                   </AdminLayout>
                 </AdminProtectedRoute>
               }
