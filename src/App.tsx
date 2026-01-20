@@ -88,26 +88,6 @@ const App = () => (
                 </StudentProtectedRoute>
               }
             />
-            <Route
-              path="/student/chat"
-              element={
-                <StudentProtectedRoute>
-                  <AdminLayout>
-                    <TeacherChat />
-                  </AdminLayout>
-                </StudentProtectedRoute>
-              }
-            />
-            <Route
-              path="/student/live"
-              element={
-                <StudentProtectedRoute>
-                  <AdminLayout>
-                    <LiveChat />
-                  </AdminLayout>
-                </StudentProtectedRoute>
-              }
-            />
 
             {/* ===================== */}
             {/* TEACHER ROUTES */}
@@ -118,6 +98,16 @@ const App = () => (
                 <TeacherProtectedRoute>
                   <AdminLayout>
                     <TeacherDashboard />
+                  </AdminLayout>
+                </TeacherProtectedRoute>
+              }
+            />
+            <Route
+              path="/teacher/chat"
+              element={
+                <TeacherProtectedRoute>
+                  <AdminLayout>
+                    <TeacherChat />
                   </AdminLayout>
                 </TeacherProtectedRoute>
               }
@@ -164,10 +154,22 @@ const App = () => (
                 </AdminProtectedRoute>
               }
             />
+            <Route
+              path="/admin/live-chat"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <LiveChat />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
 
             {/* Legacy redirects for old routes */}
-            <Route path="/teacher-chat" element={<Navigate to="/student/chat" replace />} />
-            <Route path="/live-chat" element={<Navigate to="/student/live" replace />} />
+            <Route path="/teacher-chat" element={<Navigate to="/teacher/chat" replace />} />
+            <Route path="/student/chat" element={<Navigate to="/teacher/chat" replace />} />
+            <Route path="/live-chat" element={<Navigate to="/admin/live-chat" replace />} />
+            <Route path="/student/live" element={<Navigate to="/admin/live-chat" replace />} />
 
             {/* ===================== */}
             {/* SHORT LINKS */}
