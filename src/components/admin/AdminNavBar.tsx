@@ -11,8 +11,9 @@ import {
 
 const navItems = [
   { href: '/student', label: 'דשבורד תלמיד', icon: GraduationCap },
+  { href: '/student/chat', label: 'צ\'אט תלמיד', icon: MessageSquare },
   { href: '/teacher', label: 'דשבורד מורה', icon: Users },
-  { href: '/teacher/chat', label: 'צ\'אט AI', icon: MessageSquare },
+  { href: '/teacher/chat', label: 'צ\'אט מורה', icon: MessageSquare },
   { href: '/admin/live-chat', label: 'צ\'אט חי', icon: Radio },
   { href: '/admin/analytics', label: 'אנליטיקס', icon: BarChart3 },
 ];

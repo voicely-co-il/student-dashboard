@@ -12,6 +12,7 @@ import AdminLayout from "@/components/admin/AdminLayout";
 // Pages
 import Auth from "./pages/Auth";
 import StudentDashboard from "./pages/student/StudentDashboard";
+import StudentChat from "./pages/student/StudentChat";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import TeacherChat from "./pages/TeacherChat";
 import ChatPage from "./pages/ChatPage";
@@ -84,6 +85,16 @@ const App = () => (
                 <StudentProtectedRoute>
                   <AdminLayout>
                     <StudentDashboard />
+                  </AdminLayout>
+                </StudentProtectedRoute>
+              }
+            />
+            <Route
+              path="/student/chat"
+              element={
+                <StudentProtectedRoute>
+                  <AdminLayout>
+                    <StudentChat />
                   </AdminLayout>
                 </StudentProtectedRoute>
               }
@@ -167,7 +178,6 @@ const App = () => (
 
             {/* Legacy redirects for old routes */}
             <Route path="/teacher-chat" element={<Navigate to="/teacher/chat" replace />} />
-            <Route path="/student/chat" element={<Navigate to="/teacher/chat" replace />} />
             <Route path="/live-chat" element={<Navigate to="/admin/live-chat" replace />} />
             <Route path="/student/live" element={<Navigate to="/admin/live-chat" replace />} />
 

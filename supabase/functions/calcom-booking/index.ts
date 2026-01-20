@@ -40,7 +40,14 @@ interface GetEventTypesRequest {
   action: "get_event_types";
 }
 
-type CalcomRequest = GetAvailabilityRequest | CreateBookingRequest | GetEventTypesRequest;
+interface GetBookingsRequest {
+  action: "get_bookings";
+  startDate?: string; // ISO date string, defaults to today
+  endDate?: string;   // ISO date string, defaults to today
+  status?: string[];  // Filter by status
+}
+
+type CalcomRequest = GetAvailabilityRequest | CreateBookingRequest | GetEventTypesRequest | GetBookingsRequest;
 
 // Call Cal.com API
 async function callCalApi(
@@ -100,6 +107,81 @@ Deno.serve(async (req) => {
           JSON.stringify({ success: true, data }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      case "get_bookings": {
+        // Get bookings for a date range (defaults to today)
+        const today = new Date().toISOString().split("T")[0];
+        const startDate = request.startDate || today;
+        const endDate = request.endDate || today;
+
+        // First try to get from our local database (synced via webhook)
+        let query = supabase
+          .from("calcom_bookings")
+          .select("*")
+          .gte("start_time", `${startDate}T00:00:00`)
+          .lte("start_time", `${endDate}T23:59:59`)
+          .order("start_time", { ascending: true });
+
+        // Filter by status if provided
+        if (request.status && request.status.length > 0) {
+          query = query.in("status", request.status);
+        } else {
+          // Default: exclude cancelled
+          query = query.neq("status", "cancelled");
+        }
+
+        const { data: localBookings, error: dbError } = await query;
+
+        if (dbError) {
+          console.error("Error fetching bookings from DB:", dbError);
+        }
+
+        // If we have local bookings, return them
+        if (localBookings && localBookings.length > 0) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              bookings: localBookings,
+              count: localBookings.length,
+              source: "database"
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fallback: fetch from Cal.com API directly
+        try {
+          const params = new URLSearchParams({
+            afterStart: `${startDate}T00:00:00.000Z`,
+            beforeEnd: `${endDate}T23:59:59.999Z`,
+          });
+
+          const data = await callCalApi(`/bookings?${params.toString()}`);
+          const bookingsData = data as { data?: { bookings?: unknown[] } };
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              bookings: bookingsData.data?.bookings || [],
+              count: bookingsData.data?.bookings?.length || 0,
+              source: "calcom_api"
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        } catch (apiError) {
+          console.error("Cal.com API error:", apiError);
+          // Return empty if both fail
+          return new Response(
+            JSON.stringify({
+              success: true,
+              bookings: [],
+              count: 0,
+              source: "none"
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       case "get_availability": {

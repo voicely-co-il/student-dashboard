@@ -1,11 +1,25 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Calendar, Search, BarChart3, LogOut } from 'lucide-react';
+import { Users, Calendar, Search, BarChart3, LogOut, Loader2 } from 'lucide-react';
 import voicelyLogo from '@/assets/voicely-logo.png';
+import { useCalendarBookings, formatLessonTime, formatLessonDate } from '@/hooks/admin/useCalendarBookings';
+import { useNotionCRM } from '@/hooks/admin/useNotionCRM';
 
 const TeacherDashboard = () => {
   const { profile, signOut, isAdmin } = useAuth();
+  const { data: calendarData, isLoading: calendarLoading } = useCalendarBookings();
+  const { data: crmData, isLoading: crmLoading } = useNotionCRM();
+
+  // Format next lesson info
+  const getNextLessonText = () => {
+    if (calendarLoading) return '...';
+    if (!calendarData?.nextLesson) return 'אין שיעורים קרובים';
+
+    const date = formatLessonDate(calendarData.nextLesson.start);
+    const time = formatLessonTime(calendarData.nextLesson.start);
+    return `${date}, ${time}`;
+  };
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -43,7 +57,13 @@ const TeacherDashboard = () => {
               <Users className="w-4 h-4 text-voicely-green" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">--</div>
+              <div className="text-3xl font-bold">
+                {crmLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  crmData?.activeStudents?.total || '--'
+                )}
+              </div>
               <p className="text-xs text-muted-foreground">פעילים השבוע</p>
             </CardContent>
           </Card>
@@ -56,8 +76,16 @@ const TeacherDashboard = () => {
               <Calendar className="w-4 h-4 text-voicely-orange" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">--</div>
-              <p className="text-xs text-muted-foreground">השיעור הבא: --</p>
+              <div className="text-3xl font-bold">
+                {calendarLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  calendarData?.todayCount ?? '--'
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                השיעור הבא: {getNextLessonText()}
+              </p>
             </CardContent>
           </Card>
 
@@ -77,13 +105,19 @@ const TeacherDashboard = () => {
           <Card className="playful-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                ממוצע ציונים
+                שיעורים השבוע
               </CardTitle>
               <BarChart3 className="w-4 h-4 text-voicely-yellow" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">--</div>
-              <p className="text-xs text-muted-foreground">כל התלמידים</p>
+              <div className="text-3xl font-bold">
+                {calendarLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  calendarData?.weekCount ?? '--'
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">עד סוף השבוע</p>
             </CardContent>
           </Card>
         </div>
