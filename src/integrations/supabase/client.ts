@@ -13,5 +13,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    lock: {
+      acquireLock: async () => true,
+      releaseLock: async () => {},
+    },
+    lockAcquireTimeout: 0,
   }
 });
