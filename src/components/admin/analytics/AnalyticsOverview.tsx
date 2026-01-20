@@ -7,9 +7,16 @@ import {
   Hash,
   Smile,
   TrendingUp,
-  Loader2
+  Loader2,
+  UserCheck,
+  UsersRound,
+  Award,
+  PauseCircle,
+  GraduationCap,
+  UserPlus
 } from 'lucide-react';
 import { useAnalyticsOverview } from '@/hooks/admin/useAnalyticsOverview';
+import { useNotionCRM } from '@/hooks/admin/useNotionCRM';
 import {
   ResponsiveContainer,
   BarChart,
@@ -42,8 +49,9 @@ const MOOD_COLORS: Record<string, string> = {
 
 const AnalyticsOverview = () => {
   const { data, isLoading, error } = useAnalyticsOverview();
+  const { data: crmData, isLoading: crmLoading } = useNotionCRM();
 
-  if (isLoading) {
+  if (isLoading && crmLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="w-8 h-8 animate-spin text-voicely-green" />
@@ -60,6 +68,12 @@ const AnalyticsOverview = () => {
     );
   }
 
+  // CRM stats for students breakdown
+  const activeTotal = crmData?.activeStudents?.total || 0;
+  const oneOnOneTotal = crmData?.activeStudents?.breakdown?.oneOnOne?.total || 0;
+  const groupsTotal = crmData?.activeStudents?.breakdown?.groups?.total || 0;
+  const veteransTotal = crmData?.activeStudents?.breakdown?.veterans?.total || 0;
+
   const stats = [
     {
       title: 'סה"כ שיעורים מתומללים',
@@ -69,9 +83,10 @@ const AnalyticsOverview = () => {
     },
     {
       title: 'תלמידים פעילים',
-      value: data?.totalStudents?.toLocaleString('he-IL') || '0',
+      value: crmLoading ? '...' : activeTotal.toLocaleString('he-IL'),
       icon: Users,
       color: COLORS.mint,
+      subtitle: crmData ? `${oneOnOneTotal} פרטני | ${groupsTotal} קבוצות` : undefined,
     },
     {
       title: 'ממוצע משך שיעור',
@@ -104,12 +119,107 @@ const AnalyticsOverview = () => {
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">{stat.title}</p>
                   <p className="text-2xl font-bold text-foreground mt-1">{stat.value}</p>
+                  {stat.subtitle && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{stat.subtitle}</p>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Student Breakdown from Notion CRM */}
+      {crmData && (
+        <Card className="playful-shadow">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Users className="w-5 h-5 text-voicely-green" />
+              פירוט תלמידים (מ-Notion CRM)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {/* Active 1:1 */}
+              <div className="p-4 rounded-xl bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserCheck className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800 dark:text-green-200">לומדים 1:1</span>
+                </div>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                  {crmData.activeStudents.breakdown.oneOnOne.total}
+                </p>
+                {crmData.activeStudents.breakdown.oneOnOne.alternating > 0 && (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    ({crmData.activeStudents.breakdown.oneOnOne.alternating} לסירוגין)
+                  </p>
+                )}
+              </div>
+
+              {/* Groups */}
+              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <UsersRound className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-200">קבוצות</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                  {crmData.activeStudents.breakdown.groups.total}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  חמישי: {crmData.activeStudents.breakdown.groups.thursday} | ראשון: {crmData.activeStudents.breakdown.groups.sunday}
+                </p>
+              </div>
+
+              {/* Veterans */}
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <Award className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-medium text-amber-800 dark:text-amber-200">ותיקים (3+ חודשים)</span>
+                </div>
+                <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                  {crmData.activeStudents.breakdown.veterans.total}
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  מסומנים: {crmData.activeStudents.breakdown.veterans.marked}
+                </p>
+              </div>
+
+              {/* Paused */}
+              <div className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <PauseCircle className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">בהפסקה</span>
+                </div>
+                <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+                  {crmData.pausedStudents}
+                </p>
+              </div>
+
+              {/* Completed */}
+              <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <GraduationCap className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium text-purple-800 dark:text-purple-200">סיימו</span>
+                </div>
+                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                  {crmData.completedStudents}
+                </p>
+              </div>
+
+              {/* Leads */}
+              <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <UserPlus className="w-4 h-4 text-cyan-600" />
+                  <span className="text-sm font-medium text-cyan-800 dark:text-cyan-200">לידים</span>
+                </div>
+                <p className="text-2xl font-bold text-cyan-700 dark:text-cyan-300">
+                  {crmData.leads}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

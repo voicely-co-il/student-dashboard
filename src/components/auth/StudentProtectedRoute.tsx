@@ -8,10 +8,10 @@ interface StudentProtectedRouteProps {
 }
 
 /**
- * Route guard that only allows students to access.
+ * Route guard that only allows students (and admins) to access.
  * - Redirects to /auth if not logged in
  * - Redirects to /teacher if user is a teacher
- * - Redirects to /admin if user is an admin
+ * - Admins have full access to all routes
  */
 const StudentProtectedRoute = ({ children }: StudentProtectedRouteProps) => {
   const { user, role, isLoading, isStudent } = useAuth();
@@ -38,13 +38,13 @@ const StudentProtectedRoute = ({ children }: StudentProtectedRouteProps) => {
     return <Navigate to="/teacher" replace />;
   }
 
-  // Redirect admins to their dashboard
+  // Admins can access student routes (they have full access)
   if (role === 'admin') {
-    return <Navigate to="/admin" replace />;
+    // Allow admins to view student dashboard
   }
 
-  // Only allow students
-  if (!isStudent) {
+  // Only allow students (and admins)
+  if (!isStudent && role !== 'admin') {
     return <Navigate to="/auth" replace />;
   }
 
