@@ -176,7 +176,7 @@ const TeacherDashboard = () => {
 
           <Card
             className="playful-shadow hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-voicely-green/5 to-voicely-orange/5"
-            onClick={() => window.open('https://voicely-chat.vercel.app', '_blank')}
+            onClick={() => navigate('/teacher/chat')}
           >
             <CardContent className="p-6 flex flex-col items-center text-center gap-4">
               <div className="w-16 h-16 rounded-full bg-voicely-yellow/20 flex items-center justify-center">
