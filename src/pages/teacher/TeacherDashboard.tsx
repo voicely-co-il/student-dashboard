@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Users, Calendar, Search, BarChart3, LogOut, Loader2 } from 'lucide-react';
+import { Users, Calendar, Search, BarChart3, LogOut, Loader2, MessageCircle } from 'lucide-react';
 import voicelyLogo from '@/assets/voicely-logo.png';
 import { useCalendarBookings, formatLessonTime, formatLessonDate } from '@/hooks/admin/useCalendarBookings';
 import { useNotionCRM } from '@/hooks/admin/useNotionCRM';
@@ -169,6 +169,23 @@ const TeacherDashboard = () => {
                 <h3 className="font-semibold text-lg">לוח שיעורים</h3>
                 <p className="text-sm text-muted-foreground">
                   ניהול וקביעת שיעורים
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="playful-shadow hover:shadow-lg transition-shadow cursor-pointer bg-gradient-to-br from-voicely-green/5 to-voicely-orange/5"
+            onClick={() => window.open('https://voicely-chat.vercel.app', '_blank')}
+          >
+            <CardContent className="p-6 flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-voicely-yellow/20 flex items-center justify-center">
+                <MessageCircle className="w-8 h-8 text-voicely-yellow" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">צ׳אט AI</h3>
+                <p className="text-sm text-muted-foreground">
+                  שיחה חכמה עם העוזר האישי
                 </p>
               </div>
             </CardContent>
