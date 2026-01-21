@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Sheet,
   SheetContent,
@@ -23,7 +26,16 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Target,
+  Music,
+  TrendingUp,
+  Wind,
+  Mic,
+  Sparkles,
+  Heart,
+  CheckCircle2,
 } from 'lucide-react';
+import { useStudentInsights, useStudentProgress } from '@/hooks/useStudentInsights';
 
 interface Transcript {
   id: string;
@@ -41,6 +53,10 @@ const StudentDetail = () => {
   const [selectedTranscript, setSelectedTranscript] = useState<Transcript | null>(null);
 
   const decodedName = decodeURIComponent(studentName || '');
+
+  // Fetch insights and progress
+  const { data: insights, isLoading: insightsLoading } = useStudentInsights(decodedName);
+  const { data: progress, isLoading: progressLoading } = useStudentProgress(decodedName);
 
   // Fetch student's transcripts
   const { data: transcripts, isLoading } = useQuery({
@@ -124,6 +140,24 @@ const StudentDetail = () => {
     }
   };
 
+  // Icon mapping for topics
+  const getTopicIcon = (topic: string) => {
+    if (topic.includes('נשימה')) return <Wind className="w-4 h-4 text-blue-500" />;
+    if (topic.includes('רזוננס')) return <Mic className="w-4 h-4 text-purple-500" />;
+    if (topic.includes('טווח')) return <TrendingUp className="w-4 h-4 text-green-500" />;
+    if (topic.includes('ויברטו')) return <Music className="w-4 h-4 text-pink-500" />;
+    return <Sparkles className="w-4 h-4 text-voicely-green" />;
+  };
+
+  // Mood color mapping
+  const getMoodColor = (mood: string) => {
+    if (mood === 'נלהב' || mood === 'מלא מוטיבציה') return 'bg-green-100 text-green-700 border-green-300';
+    if (mood === 'מתוסכל') return 'bg-red-100 text-red-700 border-red-300';
+    if (mood === 'מרוכז') return 'bg-blue-100 text-blue-700 border-blue-300';
+    if (mood === 'רגוע') return 'bg-purple-100 text-purple-700 border-purple-300';
+    return 'bg-gray-100 text-gray-700 border-gray-300';
+  };
+
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
@@ -186,22 +220,208 @@ const StudentDetail = () => {
         </div>
       </header>
 
-      {/* Transcripts List */}
+      {/* Main Content with Tabs */}
       <main className="p-4">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : !transcripts?.length ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>אין תמלולים עבור תלמיד זה</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {Object.entries(groupedTranscripts || {}).map(([month, items]) => (
+        <Tabs defaultValue="insights" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="insights">תובנות</TabsTrigger>
+            <TabsTrigger value="progress">התקדמות</TabsTrigger>
+            <TabsTrigger value="transcripts">תמלולים</TabsTrigger>
+          </TabsList>
+
+          {/* Insights Tab */}
+          <TabsContent value="insights" className="space-y-4">
+            {insightsLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-[200px] w-full rounded-xl" />
+                <Skeleton className="h-[200px] w-full rounded-xl" />
+              </div>
+            ) : !insights?.length ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>אין תובנות זמינות עדיין</p>
+                  <p className="text-sm mt-2">התובנות יופקו אוטומטית מהתמלולים</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Recent Insights */}
+                <Card className="playful-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Target className="w-4 h-4 text-voicely-coral" />
+                      תובנות אחרונות
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {insights.slice(0, 5).map((insight, idx) => (
+                      <div key={idx} className="p-3 rounded-lg bg-muted/50 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="outline" className={getMoodColor(insight.student_mood || '')}>
+                            {insight.student_mood || 'לא צוין'}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatShortDate((insight as any).transcripts?.lesson_date)}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {insight.key_topics?.slice(0, 4).map((topic, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs flex items-center gap-1">
+                              {getTopicIcon(topic)}
+                              {topic}
+                            </Badge>
+                          ))}
+                        </div>
+                        {insight.progress_notes && insight.progress_notes !== 'לא צוין' && (
+                          <p className="text-sm text-muted-foreground">{insight.progress_notes}</p>
+                        )}
+                        {insight.action_items && insight.action_items.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {insight.action_items.slice(0, 2).map((item, i) => (
+                              <span key={i} className="text-xs text-voicely-green flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" />
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                {/* Skills Practiced */}
+                <Card className="playful-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Music className="w-4 h-4 text-voicely-orange" />
+                      מיומנויות שנעבדו
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {[...new Set(insights.flatMap(i => i.skills_practiced || []))]
+                        .filter(s => s && s !== 'לא צוין')
+                        .slice(0, 12)
+                        .map((skill, idx) => (
+                          <Badge key={idx} variant="outline" className="text-sm">
+                            {skill}
+                          </Badge>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Progress Tab */}
+          <TabsContent value="progress" className="space-y-4">
+            {progressLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-[200px] w-full rounded-xl" />
+              </div>
+            ) : !progress ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>אין מידע על התקדמות</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Topics Progress */}
+                <Card className="playful-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-voicely-green" />
+                      נושאים שנלמדו
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {progress.topTopics?.slice(0, 6).map((topic, idx) => {
+                      const maxCount = progress.topTopics?.[0]?.count || 1;
+                      const percentage = Math.round((topic.count / maxCount) * 100);
+                      return (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {getTopicIcon(topic.topic)}
+                              <span className="text-sm">{topic.topic}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">{topic.count} שיעורים</span>
+                          </div>
+                          <Progress value={percentage} className="h-2" />
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+
+                {/* Skills Progress */}
+                <Card className="playful-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Target className="w-4 h-4 text-voicely-coral" />
+                      מיומנויות
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {progress.topSkills?.slice(0, 6).map((skill, idx) => {
+                      const maxCount = progress.topSkills?.[0]?.count || 1;
+                      const percentage = Math.round((skill.count / maxCount) * 100);
+                      return (
+                        <div key={idx} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">{skill.skill}</span>
+                            <span className="text-xs text-muted-foreground">{skill.count}x</span>
+                          </div>
+                          <Progress value={percentage} className="h-2" />
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+
+                {/* Mood Trend */}
+                <Card className="playful-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-pink-500" />
+                      מגמת מצב רוח
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {progress.moodTrend?.map((mood, idx) => (
+                        <Badge key={idx} variant="outline" className={getMoodColor(mood.mood)}>
+                          {mood.mood} ({mood.count})
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Transcripts Tab */}
+          <TabsContent value="transcripts">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : !transcripts?.length ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>אין תמלולים עבור תלמיד זה</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(groupedTranscripts || {}).map(([month, items]) => (
               <div key={month}>
                 <h2 className="text-lg font-semibold mb-3 text-muted-foreground">
                   {month}
@@ -320,6 +540,8 @@ const StudentDetail = () => {
             ))}
           </div>
         )}
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

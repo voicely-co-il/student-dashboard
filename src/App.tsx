@@ -23,6 +23,7 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminResources from "./pages/admin/AdminResources";
 import AdminMarketing from "./pages/admin/AdminMarketing";
 import AdminMemoryDebug from "./pages/admin/AdminMemoryDebug";
+import AdminNameResolution from "./pages/admin/AdminNameResolution";
 import ShortLinkResolver from "./pages/ShortLinkResolver";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
@@ -216,6 +217,16 @@ const App = () => (
                 <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminMemoryDebug />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/names"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminNameResolution />
                   </AdminLayout>
                 </AdminProtectedRoute>
               }

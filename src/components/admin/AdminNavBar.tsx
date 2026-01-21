@@ -10,6 +10,7 @@ import {
   Gauge,
   Sparkles,
   Brain,
+  Tags,
 } from 'lucide-react';
 
 const navItems = [
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/admin/resources', label: 'משאבים', icon: Gauge },
   { href: '/admin/marketing', label: 'שיווק', icon: Sparkles },
   { href: '/admin/memory', label: 'זיכרון', icon: Brain },
+  { href: '/admin/names', label: 'שמות', icon: Tags },
 ];
 
 const AdminNavBar = () => {

@@ -9,6 +9,8 @@ import StreakCard from '@/components/dashboard/StreakCard';
 import XPLevelCard from '@/components/dashboard/XPLevelCard';
 import DailyGoalCard from '@/components/dashboard/DailyGoalCard';
 import BadgesCard from '@/components/dashboard/BadgesCard';
+import SkillsProgressCard from '@/components/dashboard/SkillsProgressCard';
+import RepertoireCard from '@/components/dashboard/RepertoireCard';
 import { Wind, Music } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -134,7 +136,13 @@ const Index = () => {
           )}
         </div>
 
-        {/* Row 4: Badges */}
+        {/* Row 4: Skills Progress + Repertoire */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SkillsProgressCard />
+          <RepertoireCard />
+        </div>
+
+        {/* Row 5: Badges */}
         {isLoading ? (
           <Skeleton className="h-[200px] rounded-xl" />
         ) : (

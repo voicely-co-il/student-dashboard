@@ -8,7 +8,52 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-interface TranscriptInsight {
+// Expert vocal coaching analysis - detailed insights
+interface ExpertInsight {
+  techniques_worked: Array<{
+    technique: string;
+    details: string;
+    student_response: string;
+  }>;
+  exercises_performed: Array<{
+    name: string;
+    purpose: string;
+    execution: string;
+  }>;
+  technical_progress: {
+    improvements: string[];
+    breakthroughs: string[];
+    challenges_overcome: string[];
+  };
+  areas_to_work: Array<{
+    area: string;
+    current_level: string;
+    specific_issues: string[];
+    recommended_exercises: string[];
+  }>;
+  repertoire: Array<{
+    song: string;
+    artist: string;
+    style: string;
+    focus_areas: string[];
+  }>;
+  emotional_state: {
+    motivation_level: string;
+    energy: string;
+    receptiveness: string;
+    confidence: string;
+  };
+  specific_recommendations: {
+    home_practice: string[];
+    focus_next_lesson: string[];
+    songs_to_explore: string[];
+  };
+  lesson_summary: string;
+  teacher_notes_detected: string[];
+}
+
+// Basic insight format (for backward compatibility)
+interface BasicInsight {
   key_topics: string[];
   skills_practiced: string[];
   student_mood: string;
@@ -17,36 +62,121 @@ interface TranscriptInsight {
   action_items: string[];
 }
 
-// Extract insights using Gemini (cheaper & faster for bulk processing)
+// Expert analysis prompt
+const EXPERT_PROMPT = `אתה מומחה לפדגוגיה ווקאלית עם ניסיון של 20 שנה בהוראת קול ושירה.
+נתח את תמליל השיעור הבא וחלץ מידע מפורט על התקדמות התלמיד.
+
+## הנחיות לניתוח:
+
+### 1. טכניקות שנעבדו
+זהה את הטכניקות הספציפיות:
+- תמיכת נשימה (Breath Support / Appoggio)
+- רזוננס (Resonance - mask, chest, head)
+- רגיסטרים (Registration - chest/mix/head/passaggio)
+- ויברטו, דינמיקה, דיקציה
+- הרחבת טווח (Range Extension)
+
+### 2. תרגילים שבוצעו
+- Lip Trills, Humming, Sirens
+- סקאלות, אינטרוולים
+- תרגילי סגנון (riffs, runs)
+
+### 3. התקדמות טכנית
+- מה השתפר במהלך השיעור
+- אירורקה moments
+- התגברות על קשיים
+
+### 4. אזורי עבודה
+- מתחים (tension patterns)
+- בעיות נשימה
+- קשיים ברגיסטרים
+
+### 5. רפרטואר - שירים שנעבדו
+
+### 6. מצב רגשי - מוטיבציה, אנרגיה, ביטחון
+
+### 7. המלצות ספציפיות
+- תרגילים לבית
+- מיקוד לשיעור הבא
+- שירים מומלצים
+
+---
+
+תמליל השיעור של STUDENT_NAME:
+TRANSCRIPT_TEXT
+
+---
+
+החזר JSON בלבד בפורמט:
+{
+  "techniques_worked": [
+    {"technique": "שם הטכניקה", "details": "פירוט", "student_response": "תגובת התלמיד"}
+  ],
+  "exercises_performed": [
+    {"name": "שם התרגיל", "purpose": "מטרה", "execution": "טוב/בינוני/צריך עבודה"}
+  ],
+  "technical_progress": {
+    "improvements": ["שיפור"],
+    "breakthroughs": ["פריצת דרך"],
+    "challenges_overcome": ["אתגר שהתגברו עליו"]
+  },
+  "areas_to_work": [
+    {"area": "אזור", "current_level": "1-5", "specific_issues": ["בעיה"], "recommended_exercises": ["תרגיל"]}
+  ],
+  "repertoire": [
+    {"song": "שיר", "artist": "אמן", "style": "סגנון", "focus_areas": ["מיקוד"]}
+  ],
+  "emotional_state": {
+    "motivation_level": "גבוהה/בינונית/נמוכה",
+    "energy": "גבוהה/בינונית/נמוכה",
+    "receptiveness": "גבוהה/בינונית/נמוכה",
+    "confidence": "גבוה/בינוני/נמוך"
+  },
+  "specific_recommendations": {
+    "home_practice": ["תרגיל לבית"],
+    "focus_next_lesson": ["מיקוד"],
+    "songs_to_explore": ["שיר מומלץ"]
+  },
+  "lesson_summary": "סיכום קצר",
+  "teacher_notes_detected": ["הערות מהמורה"]
+}`;
+
+// Quick analysis prompt (for batch processing - cheaper)
+const QUICK_PROMPT = `אתה מומחה לפיתוח קול. נתח בקצרה את תמליל השיעור.
+
+תמליל השיעור של STUDENT_NAME:
+TRANSCRIPT_TEXT
+
+החזר JSON בלבד:
+{
+  "key_topics": ["3 נושאים עיקריים"],
+  "skills_practiced": ["3 מיומנויות שנעבדו"],
+  "student_mood": "מילה אחת - מצב רוח (מלא מוטיבציה/רגוע/מתוסכל/נלהב/מרוכז)",
+  "progress_notes": "משפט אחד על התקדמות",
+  "teacher_recommendations": "המלצה עיקרית מהשיעור",
+  "action_items": ["2 פעולות לביצוע"]
+}
+
+הנחיות:
+- נושאים: נשימה סרעפתית, רזוננס, טווח, ויברטו, תמיכה, דיקציה, פאסאג'ו
+- מיומנויות: סקאלות, Lip Trills, נשימה, הקרנה, דינמיקה, מעברים
+- אם אין מידע מספיק, כתוב "לא צוין"`;
+
+// Extract insights using Gemini
 async function extractInsights(
   transcriptText: string,
-  studentName: string
-): Promise<TranscriptInsight> {
+  studentName: string,
+  useExpertMode: boolean = false
+): Promise<BasicInsight | ExpertInsight> {
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
   if (!geminiKey) {
     throw new Error("Missing GEMINI_API_KEY");
   }
 
-  const prompt = `אתה מנתח שיעורי קול ושירה. נתח את התמליל הבא וחלץ את המידע המבוקש.
-
-תמליל השיעור של ${studentName}:
-${transcriptText.slice(0, 8000)}
-
-החזר JSON בלבד בפורמט הבא (בעברית):
-{
-  "key_topics": ["נושא 1", "נושא 2", "נושא 3"],
-  "skills_practiced": ["מיומנות 1", "מיומנות 2"],
-  "student_mood": "מצב רוח התלמיד (מילה אחת או שתיים)",
-  "progress_notes": "סיכום התקדמות קצר",
-  "teacher_recommendations": "המלצות המורה מהשיעור",
-  "action_items": ["פעולה 1", "פעולה 2"]
-}
-
-הנחיות:
-- נושאים טיפוסיים: נשימה סרעפתית, רזוננס, הרחבת טווח, ויברטו, תמיכה, דיקציה, פאסאג'ו, ביטוי רגשי
-- מיומנויות טיפוסיות: סקאלות, אינטרוולים, Lip Trills, תרגילי נשימה, הקרנה, דינמיקה, מעברים
-- מצבי רוח: מלא מוטיבציה, רגוע, מתוסכל, מתרגש, עייף, מרוכז, נלהב
-- אם אין מספיק מידע, השתמש ב-"לא צוין"`;
+  const prompt = useExpertMode ? EXPERT_PROMPT : QUICK_PROMPT;
+  const finalPrompt = prompt
+    .replace("STUDENT_NAME", studentName)
+    .replace("TRANSCRIPT_TEXT", transcriptText.slice(0, useExpertMode ? 12000 : 6000));
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
@@ -54,10 +184,10 @@ ${transcriptText.slice(0, 8000)}
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ parts: [{ text: finalPrompt }] }],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 1024,
+          maxOutputTokens: useExpertMode ? 2048 : 1024,
         },
       }),
     }
@@ -69,30 +199,39 @@ ${transcriptText.slice(0, 8000)}
   // Extract JSON from response
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    console.error("Failed to extract JSON from:", text);
-    return {
-      key_topics: ["לא צוין"],
-      skills_practiced: ["לא צוין"],
-      student_mood: "לא צוין",
-      progress_notes: "לא ניתן לחלץ מידע",
-      teacher_recommendations: "לא צוין",
-      action_items: [],
-    };
+    console.error("Failed to extract JSON from:", text.slice(0, 200));
+    return getDefaultInsight(useExpertMode);
   }
 
   try {
     return JSON.parse(jsonMatch[0]);
   } catch {
-    console.error("Failed to parse JSON:", jsonMatch[0]);
-    return {
-      key_topics: ["לא צוין"],
-      skills_practiced: ["לא צוין"],
-      student_mood: "לא צוין",
-      progress_notes: "לא ניתן לחלץ מידע",
-      teacher_recommendations: "לא צוין",
-      action_items: [],
-    };
+    console.error("Failed to parse JSON:", jsonMatch[0].slice(0, 200));
+    return getDefaultInsight(useExpertMode);
   }
+}
+
+function getDefaultInsight(expert: boolean): BasicInsight {
+  return {
+    key_topics: ["לא צוין"],
+    skills_practiced: ["לא צוין"],
+    student_mood: "לא צוין",
+    progress_notes: "לא ניתן לחלץ מידע",
+    teacher_recommendations: "לא צוין",
+    action_items: [],
+  };
+}
+
+// Convert expert insight to basic format for storage
+function expertToBasic(expert: ExpertInsight): BasicInsight {
+  return {
+    key_topics: expert.techniques_worked?.map(t => t.technique) || ["לא צוין"],
+    skills_practiced: expert.exercises_performed?.map(e => e.name) || ["לא צוין"],
+    student_mood: expert.emotional_state?.motivation_level || "לא צוין",
+    progress_notes: expert.lesson_summary || "לא צוין",
+    teacher_recommendations: expert.specific_recommendations?.focus_next_lesson?.join(", ") || "לא צוין",
+    action_items: expert.specific_recommendations?.home_practice || [],
+  };
 }
 
 Deno.serve(async (req) => {
@@ -106,15 +245,25 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get parameters
-    const { limit = 50, offset = 0 } = await req.json().catch(() => ({}));
+    const {
+      limit = 50,
+      offset = 0,
+      expert_mode = false,  // Use expert analysis (more detailed, costs more)
+      student_id = null     // Optional: process specific student only
+    } = await req.json().catch(() => ({}));
 
-    // Get transcripts that don't have insights yet
-    const { data: transcripts, error: fetchError } = await supabase
+    // Build query
+    let query = supabase
       .from("transcripts")
-      .select("id, title, full_text, student_name, ai_summary")
+      .select("id, title, full_text, student_name, ai_summary, lesson_date")
       .not("full_text", "is", null)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order("created_at", { ascending: false });
+
+    if (student_id) {
+      query = query.eq("student_name", student_id);
+    }
+
+    const { data: transcripts, error: fetchError } = await query.range(offset, offset + limit - 1);
 
     if (fetchError) {
       throw new Error(`Failed to fetch transcripts: ${fetchError.message}`);
@@ -130,7 +279,7 @@ Deno.serve(async (req) => {
     const existingIds = new Set(existingInsights?.map((i) => i.transcript_id) || []);
     const toProcess = transcripts?.filter((t) => !existingIds.has(t.id)) || [];
 
-    console.log(`Processing ${toProcess.length} transcripts (offset: ${offset})`);
+    console.log(`Processing ${toProcess.length} transcripts (expert_mode: ${expert_mode}, offset: ${offset})`);
 
     let processed = 0;
     let errors = 0;
@@ -145,23 +294,29 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const insights = await extractInsights(
+        const rawInsight = await extractInsights(
           textToAnalyze,
-          transcript.student_name || "תלמיד"
+          transcript.student_name || "תלמיד",
+          expert_mode
         );
+
+        // Convert to basic format if needed
+        const insight = expert_mode && 'techniques_worked' in rawInsight
+          ? expertToBasic(rawInsight as ExpertInsight)
+          : rawInsight as BasicInsight;
 
         // Insert insights
         const { error: insertError } = await supabase
           .from("transcript_insights")
           .insert({
             transcript_id: transcript.id,
-            key_topics: insights.key_topics,
-            skills_practiced: insights.skills_practiced,
-            student_mood: insights.student_mood,
-            progress_notes: insights.progress_notes,
-            teacher_recommendations: insights.teacher_recommendations,
-            action_items: insights.action_items,
-            raw_ai_response: insights,
+            key_topics: insight.key_topics,
+            skills_practiced: insight.skills_practiced,
+            student_mood: insight.student_mood,
+            progress_notes: insight.progress_notes,
+            teacher_recommendations: insight.teacher_recommendations,
+            action_items: insight.action_items,
+            raw_ai_response: rawInsight, // Store full expert response
           });
 
         if (insertError) {
@@ -169,11 +324,11 @@ Deno.serve(async (req) => {
           errors++;
         } else {
           processed++;
-          console.log(`Processed ${transcript.id}: ${transcript.student_name}`);
+          console.log(`✓ ${transcript.id}: ${transcript.student_name} (${insight.key_topics.slice(0, 2).join(", ")})`);
         }
 
-        // Small delay to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        // Delay to avoid rate limiting
+        await new Promise((resolve) => setTimeout(resolve, expert_mode ? 500 : 200));
       } catch (err) {
         console.error(`Error processing ${transcript.id}:`, err);
         errors++;
@@ -197,6 +352,7 @@ Deno.serve(async (req) => {
         errors,
         total: transcripts?.length || 0,
         alreadyProcessed: existingIds.size,
+        expert_mode,
         message: `Processed ${processed} transcripts with ${errors} errors`,
       }),
       {

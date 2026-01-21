@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 export interface StudentCardData {
   name: string;
+  originalName?: string; // Original name from transcript (for navigation)
   transcriptCount: number;
   firstLesson: string | null;
   lastLesson: string | null;

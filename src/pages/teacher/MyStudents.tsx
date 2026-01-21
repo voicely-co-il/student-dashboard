@@ -17,6 +17,7 @@ import {
   Clock,
 } from 'lucide-react';
 import StudentCard, { StudentCardData } from '@/components/teacher/StudentCard';
+import { useResolvedNameMap } from '@/hooks/admin/useStudentNameMappings';
 
 type FilterType = 'all' | 'active' | 'recent' | 'inactive';
 
@@ -25,9 +26,12 @@ const MyStudents = () => {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
 
-  // Fetch students from transcripts
-  const { data, isLoading, refetch, isRefetching } = useQuery({
-    queryKey: ['teacher-students'],
+  // Get resolved name mappings
+  const nameMap = useResolvedNameMap();
+
+  // Fetch raw students from transcripts
+  const { data: rawStudents, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['teacher-students-raw'],
     queryFn: async () => {
       const { data: transcripts, error } = await supabase
         .from('transcripts')
@@ -55,30 +59,71 @@ const MyStudents = () => {
         }
       }
 
-      // Convert to array with first/last dates
-      const result: StudentCardData[] = [];
-      studentMap.forEach((data, name) => {
-        const sortedDates = data.dates.sort();
-        result.push({
-          name,
-          transcriptCount: data.count,
-          firstLesson: sortedDates[0] || null,
-          lastLesson: sortedDates[sortedDates.length - 1] || null,
-        });
-      });
+      // Convert to array
+      const result: Array<{
+        originalName: string;
+        count: number;
+        dates: string[];
+      }> = [];
 
-      // Sort by last lesson date (most recent first)
-      result.sort((a, b) => {
-        if (!a.lastLesson && !b.lastLesson) return 0;
-        if (!a.lastLesson) return 1;
-        if (!b.lastLesson) return -1;
-        return b.lastLesson.localeCompare(a.lastLesson);
+      studentMap.forEach((data, name) => {
+        result.push({
+          originalName: name,
+          count: data.count,
+          dates: data.dates.sort(),
+        });
       });
 
       return result;
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  // Process students with name mappings (useMemo to react to nameMap changes)
+  const data = useMemo(() => {
+    if (!rawStudents) return [];
+
+    // Group by resolved name (merge same students with different original names)
+    const resolvedMap = new Map<string, StudentCardData>();
+
+    rawStudents.forEach((student) => {
+      // Use resolved name if available, otherwise use original
+      const displayName = nameMap.get(student.originalName) || student.originalName;
+
+      const existing = resolvedMap.get(displayName);
+      if (existing) {
+        // Merge with existing student
+        existing.transcriptCount += student.count;
+        if (student.dates[0] && (!existing.firstLesson || student.dates[0] < existing.firstLesson)) {
+          existing.firstLesson = student.dates[0];
+        }
+        const lastDate = student.dates[student.dates.length - 1];
+        if (lastDate && (!existing.lastLesson || lastDate > existing.lastLesson)) {
+          existing.lastLesson = lastDate;
+        }
+      } else {
+        resolvedMap.set(displayName, {
+          name: displayName,
+          originalName: student.originalName, // Keep original for navigation
+          transcriptCount: student.count,
+          firstLesson: student.dates[0] || null,
+          lastLesson: student.dates[student.dates.length - 1] || null,
+        });
+      }
+    });
+
+    const result: StudentCardData[] = Array.from(resolvedMap.values());
+
+    // Sort by last lesson date (most recent first)
+    result.sort((a, b) => {
+      if (!a.lastLesson && !b.lastLesson) return 0;
+      if (!a.lastLesson) return 1;
+      if (!b.lastLesson) return -1;
+      return b.lastLesson.localeCompare(a.lastLesson);
+    });
+
+    return result;
+  }, [rawStudents, nameMap]);
 
   // Filter and search
   const filteredStudents = useMemo(() => {
@@ -146,8 +191,9 @@ const MyStudents = () => {
   }, [data]);
 
   const handleStudentClick = (student: StudentCardData) => {
-    // Navigate to student detail page
-    navigate(`/teacher/student/${encodeURIComponent(student.name)}`);
+    // Navigate to student detail page using original name (for DB query)
+    const nameForQuery = student.originalName || student.name;
+    navigate(`/teacher/student/${encodeURIComponent(nameForQuery)}`);
   };
 
   return (

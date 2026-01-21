@@ -6,12 +6,20 @@ import { Users, Calendar, Search, BarChart3, LogOut, Loader2, MessageCircle } fr
 import voicelyLogo from '@/assets/voicely-logo.png';
 import { useCalendarBookings, formatLessonTime, formatLessonDate } from '@/hooks/admin/useCalendarBookings';
 import { useNotionCRM } from '@/hooks/admin/useNotionCRM';
+import {
+  RecentActivityCard,
+  SkillsDistributionCard,
+  TopicsDistributionCard,
+  StudentsOverviewCard,
+} from '@/components/teacher/InsightsOverview';
+import { useAllStudentsProgress } from '@/hooks/useStudentInsights';
 
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const { profile, signOut, isAdmin } = useAuth();
   const { data: calendarData, isLoading: calendarLoading } = useCalendarBookings();
   const { data: crmData, isLoading: crmLoading } = useNotionCRM();
+  const { data: studentsProgress } = useAllStudentsProgress();
 
   // Format next lesson info
   const getNextLessonText = () => {
@@ -99,8 +107,12 @@ const TeacherDashboard = () => {
               <Search className="w-4 h-4 text-voicely-coral" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">825</div>
-              <p className="text-xs text-muted-foreground">מ-828 מעובדים</p>
+              <div className="text-3xl font-bold">
+                {studentsProgress?.reduce((sum, s) => sum + s.lessons, 0) || '--'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {studentsProgress?.length || 0} תלמידים
+              </p>
             </CardContent>
           </Card>
 
@@ -192,17 +204,17 @@ const TeacherDashboard = () => {
           </Card>
         </div>
 
-        {/* Placeholder for future content */}
-        <Card className="playful-shadow">
-          <CardHeader>
-            <CardTitle>פעילות אחרונה</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-8 text-muted-foreground">
-              <p>בקרוב - רשימת הפעילויות האחרונות</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Insights Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <RecentActivityCard />
+          <StudentsOverviewCard />
+        </div>
+
+        {/* Analytics Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SkillsDistributionCard />
+          <TopicsDistributionCard />
+        </div>
       </main>
     </div>
   );
