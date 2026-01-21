@@ -12,14 +12,11 @@ import {
   TopicsDistributionCard,
   StudentsOverviewCard,
 } from '@/components/teacher/InsightsOverview';
-import { useAllStudentsProgress } from '@/hooks/useStudentInsights';
-
 const TeacherDashboard = () => {
   const navigate = useNavigate();
   const { profile, signOut, isAdmin } = useAuth();
   const { data: calendarData, isLoading: calendarLoading } = useCalendarBookings();
   const { data: crmData, isLoading: crmLoading } = useNotionCRM();
-  const { data: studentsProgress } = useAllStudentsProgress();
 
   // Format next lesson info
   const getNextLessonText = () => {
@@ -102,23 +99,6 @@ const TeacherDashboard = () => {
           <Card className="playful-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                תמלולים
-              </CardTitle>
-              <Search className="w-4 h-4 text-voicely-coral" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {studentsProgress?.reduce((sum, s) => sum + s.lessons, 0) || '--'}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {studentsProgress?.length || 0} תלמידים
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="playful-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
                 שיעורים השבוע
               </CardTitle>
               <BarChart3 className="w-4 h-4 text-voicely-yellow" />
@@ -155,6 +135,7 @@ const TeacherDashboard = () => {
             </CardContent>
           </Card>
 
+
           <Card
             className="playful-shadow hover:shadow-lg transition-shadow cursor-pointer"
             onClick={() => navigate('/teacher/search')}
@@ -172,7 +153,10 @@ const TeacherDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="playful-shadow hover:shadow-lg transition-shadow cursor-pointer">
+          <Card
+            className="playful-shadow hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => navigate('/teacher/schedule')}
+          >
             <CardContent className="p-6 flex flex-col items-center text-center gap-4">
               <div className="w-16 h-16 rounded-full bg-voicely-coral/10 flex items-center justify-center">
                 <Calendar className="w-8 h-8 text-voicely-coral" />
@@ -180,7 +164,7 @@ const TeacherDashboard = () => {
               <div>
                 <h3 className="font-semibold text-lg">לוח שיעורים</h3>
                 <p className="text-sm text-muted-foreground">
-                  ניהול וקביעת שיעורים
+                  צפייה בשיעורים הקרובים
                 </p>
               </div>
             </CardContent>
