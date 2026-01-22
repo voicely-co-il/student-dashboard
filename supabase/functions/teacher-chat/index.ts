@@ -34,6 +34,7 @@ type Intent =
   | "calendar_view"
   | "transcript_search"
   | "lesson_plan"
+  | "web_search"
   | "general_question"
   | "unknown";
 
@@ -85,7 +86,7 @@ ${history.slice(-3).map(m => `${m.role}: ${m.content}`).join("\n")}
 
 Return JSON in this exact format:
 {
-  "intent": "crm_add_student" | "crm_update_student" | "crm_search_student" | "calendar_add_event" | "calendar_view" | "transcript_search" | "lesson_plan" | "general_question" | "unknown",
+  "intent": "crm_add_student" | "crm_update_student" | "crm_search_student" | "calendar_add_event" | "calendar_view" | "transcript_search" | "lesson_plan" | "web_search" | "general_question" | "unknown",
   "entities": {
     "student_name": "name of the student mentioned (e.g., Dana, Sarah Cohen)",
     "date": "date mentioned (e.g., tomorrow, מחר, 21/1, יום שני)",
@@ -104,6 +105,7 @@ Important:
   - "one_on_one" = שיעור פרטי, 1:1, אחד על אחד, פרטי
   - "group" = קבוצה, קבוצתי, group
   - null = not specified (need to ask)
+- web_search: Use when user asks about general knowledge, techniques, methods, or anything that requires up-to-date information from the internet (e.g., "what is belting", "how to warm up voice", "מה זה head voice").
 Return ONLY valid JSON, no markdown or extra text.`;
 
   try {
@@ -548,15 +550,59 @@ async function searchTranscripts(
   }
 }
 
-// Generate response using Gemini
-async function generateResponse(
-  message: string,
-  intent: ClassifiedIntent,
-  context: string,
-  history: ConversationMessage[]
-): Promise<string> {
-  const geminiKey = Deno.env.get("GEMINI_API_KEY");
+// Search the web using Perplexity API
+async function searchWeb(query: string): Promise<string> {
+  const perplexityKey = Deno.env.get("PERPLEXITY_API_KEY");
 
+  if (!perplexityKey) {
+    console.log("Perplexity API key not configured");
+    return "";
+  }
+
+  try {
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${perplexityKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-sonar-small-128k-online",
+        messages: [
+          {
+            role: "system",
+            content: "You are a helpful assistant. Provide concise, factual answers in Hebrew. Focus on vocal coaching, singing, and voice training topics.",
+          },
+          {
+            role: "user",
+            content: query,
+          },
+        ],
+        max_tokens: 500,
+        temperature: 0.2,
+      }),
+    });
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (content) {
+      return `[חיפוש אינטרנט: ${content}]`;
+    }
+    return "";
+  } catch (error) {
+    console.error("Perplexity search error:", error);
+    return "";
+  }
+}
+
+// Build Gemini contents for both streaming and non-streaming
+function buildGeminiContents(
+  message: string,
+  context: string,
+  history: ConversationMessage[],
+  customSystemPrompt?: string
+) {
   // Build conversation for Gemini
   const conversationParts = history.slice(-6).map((m) => ({
     role: m.role === "user" ? "user" : "model",
@@ -573,19 +619,114 @@ async function generateResponse(
     parts: [{ text: `${message}\n\n${contextInstruction}` }],
   });
 
+  // Build system prompt - combine default with custom project prompt
+  const finalSystemPrompt = customSystemPrompt
+    ? `${SYSTEM_PROMPT}\n\n--- הנחיות נוספות מהפרויקט ---\n${customSystemPrompt}`
+    : SYSTEM_PROMPT;
+
+  // Add system prompt as first message
+  return [
+    { role: "user", parts: [{ text: finalSystemPrompt + "\n\nענה בעברית." }] },
+    { role: "model", parts: [{ text: "הבנתי, אני מוכן לעזור." }] },
+    ...conversationParts,
+  ];
+}
+
+// Generate streaming response using Gemini
+async function generateStreamingResponse(
+  message: string,
+  intent: ClassifiedIntent,
+  context: string,
+  history: ConversationMessage[],
+  customSystemPrompt?: string
+): Promise<ReadableStream> {
+  const geminiKey = Deno.env.get("GEMINI_API_KEY");
+  const allContents = buildGeminiContents(message, context, history, customSystemPrompt);
+
+  console.log("Starting streaming response with context:", context);
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${geminiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: allContents,
+        generationConfig: { maxOutputTokens: 2000 },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("Gemini streaming error:", error);
+    throw new Error(`Gemini API error: ${response.status}`);
+  }
+
+  // Transform Gemini SSE to our own SSE format
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+
+  return new ReadableStream({
+    async start(controller) {
+      let buffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr && jsonStr !== "[DONE]") {
+                try {
+                  const data = JSON.parse(jsonStr);
+                  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                  if (text) {
+                    // Send text chunk
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+                  }
+                } catch (e) {
+                  // Skip malformed JSON
+                }
+              }
+            }
+          }
+        }
+
+        // Signal completion
+        controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
+        controller.close();
+      } catch (error) {
+        console.error("Stream processing error:", error);
+        controller.error(error);
+      }
+    },
+  });
+}
+
+// Generate response using Gemini (non-streaming fallback)
+async function generateResponse(
+  message: string,
+  intent: ClassifiedIntent,
+  context: string,
+  history: ConversationMessage[],
+  customSystemPrompt?: string
+): Promise<string> {
+  const geminiKey = Deno.env.get("GEMINI_API_KEY");
+  const allContents = buildGeminiContents(message, context, history, customSystemPrompt);
+
   try {
     console.log("Generating response with context:", context);
-    console.log("Gemini key for response exists:", !!geminiKey);
-
-    // Add system prompt as first message
-    const allContents = [
-      { role: "user", parts: [{ text: SYSTEM_PROMPT + "\n\nענה בעברית." }] },
-      { role: "model", parts: [{ text: "הבנתי, אני מוכן לעזור." }] },
-      ...conversationParts,
-    ];
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -622,7 +763,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { message, teacherId, conversationHistory = [] } = await req.json();
+    const { message, teacherId, conversationHistory = [], customSystemPrompt, stream = false } = await req.json();
 
     if (!message) {
       return new Response(
@@ -822,16 +963,95 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "web_search": {
+        const query = intent.entities.search_query || message;
+        const webResult = await searchWeb(query);
+        if (webResult) {
+          context = webResult;
+          actions.push({
+            type: "search_result",
+            label: "חיפוש אינטרנט",
+            status: "completed",
+          });
+        } else {
+          context = "לא הצלחתי לחפש באינטרנט. אנסה לענות על בסיס הידע שלי.";
+        }
+        break;
+      }
+
       default:
         context = "שאלה כללית או בקשה לא מזוהה.";
     }
 
-    // Generate response
+    // Handle streaming response
+    if (stream) {
+      try {
+        // Send actions/intent as initial metadata
+        const metadata = JSON.stringify({
+          intent: intent.intent,
+          actions: actions.length > 0 ? actions : undefined,
+        });
+
+        const streamResponse = await generateStreamingResponse(
+          message,
+          intent,
+          context,
+          conversationHistory,
+          customSystemPrompt
+        );
+
+        // Create a new stream that prepends metadata
+        const encoder = new TextEncoder();
+        const metadataStream = new ReadableStream({
+          start(controller) {
+            // Send metadata first
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ metadata: JSON.parse(metadata) })}\n\n`));
+            controller.close();
+          }
+        });
+
+        // Combine metadata stream with response stream
+        const combinedStream = new ReadableStream({
+          async start(controller) {
+            // First, send metadata
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ metadata: JSON.parse(metadata) })}\n\n`));
+
+            // Then pipe the Gemini stream
+            const reader = streamResponse.getReader();
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                controller.enqueue(value);
+              }
+              controller.close();
+            } catch (error) {
+              controller.error(error);
+            }
+          }
+        });
+
+        return new Response(combinedStream, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+          },
+        });
+      } catch (error) {
+        console.error("Streaming error:", error);
+        // Fall back to non-streaming on error
+      }
+    }
+
+    // Generate non-streaming response
     const response = await generateResponse(
       message,
       intent,
       context,
-      conversationHistory
+      conversationHistory,
+      customSystemPrompt
     );
 
     return new Response(

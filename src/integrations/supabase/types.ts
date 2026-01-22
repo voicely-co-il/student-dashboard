@@ -942,6 +942,182 @@ export type Database = {
           },
         ]
       }
+      marketing_assets: {
+        Row: {
+          asset_type: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          estimated_cost_usd: number | null
+          id: string
+          negative_prompt: string | null
+          prompt: string | null
+          service: string
+          settings: Json | null
+          status: string
+          tags: string[] | null
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string | null
+          url: string | null
+          used_in_campaigns: string[] | null
+        }
+        Insert: {
+          asset_type: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_cost_usd?: number | null
+          id?: string
+          negative_prompt?: string | null
+          prompt?: string | null
+          service: string
+          settings?: Json | null
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string | null
+          url?: string | null
+          used_in_campaigns?: string[] | null
+        }
+        Update: {
+          asset_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          estimated_cost_usd?: number | null
+          id?: string
+          negative_prompt?: string | null
+          prompt?: string | null
+          service?: string
+          settings?: Json | null
+          status?: string
+          tags?: string[] | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string | null
+          url?: string | null
+          used_in_campaigns?: string[] | null
+        }
+        Relationships: []
+      }
+      marketing_models: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_he: string
+          thumbnail_url: string | null
+          token: string
+          tune_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_he: string
+          thumbnail_url?: string | null
+          token: string
+          tune_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_he?: string
+          thumbnail_url?: string | null
+          token?: string
+          tune_id?: string
+        }
+        Relationships: []
+      }
+      marketing_scenarios: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          emoji: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_he: string
+          prompt_template: string
+          sort_order: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_he: string
+          prompt_template: string
+          sort_order?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_he?: string
+          prompt_template?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      memory_operations_log: {
+        Row: {
+          created_at: string
+          id: string
+          input_data: Json | null
+          latency_ms: number | null
+          memories_affected: string[] | null
+          operation: string
+          output_data: Json | null
+          session_id: string | null
+          tokens_used: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          input_data?: Json | null
+          latency_ms?: number | null
+          memories_affected?: string[] | null
+          operation: string
+          output_data?: Json | null
+          session_id?: string | null
+          tokens_used?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          input_data?: Json | null
+          latency_ms?: number | null
+          memories_affected?: string[] | null
+          operation?: string
+          output_data?: Json | null
+          session_id?: string | null
+          tokens_used?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_operations_log_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "student_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notion_sync_log: {
         Row: {
           created_at: string | null
@@ -1198,6 +1374,131 @@ export type Database = {
           metadata?: Json | null
           slug?: string
           target_id?: string
+        }
+        Relationships: []
+      }
+      student_chat_sessions: {
+        Row: {
+          chat_type: string | null
+          context_used: string[] | null
+          created_at: string
+          extracted_memories: string[] | null
+          id: string
+          last_message_at: string | null
+          message_count: number | null
+          messages: Json | null
+          status: string | null
+          summary: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_type?: string | null
+          context_used?: string[] | null
+          created_at?: string
+          extracted_memories?: string[] | null
+          id?: string
+          last_message_at?: string | null
+          message_count?: number | null
+          messages?: Json | null
+          status?: string | null
+          summary?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_type?: string | null
+          context_used?: string[] | null
+          created_at?: string
+          extracted_memories?: string[] | null
+          id?: string
+          last_message_at?: string | null
+          message_count?: number | null
+          messages?: Json | null
+          status?: string | null
+          summary?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      student_name_mapping_history: {
+        Row: {
+          changed_at: string | null
+          changed_by: string | null
+          id: string
+          mapping_id: string | null
+          previous_resolved_name: string | null
+          previous_status: string | null
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          mapping_id?: string | null
+          previous_resolved_name?: string | null
+          previous_status?: string | null
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          mapping_id?: string | null
+          previous_resolved_name?: string | null
+          previous_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_name_mapping_history_mapping_id_fkey"
+            columns: ["mapping_id"]
+            isOneToOne: false
+            referencedRelation: "student_name_mappings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_name_mappings: {
+        Row: {
+          created_at: string | null
+          crm_match: string | null
+          id: string
+          last_seen_at: string | null
+          notes: string | null
+          original_name: string
+          resolved_name: string | null
+          status: string | null
+          transcript_count: number | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          crm_match?: string | null
+          id?: string
+          last_seen_at?: string | null
+          notes?: string | null
+          original_name: string
+          resolved_name?: string | null
+          status?: string | null
+          transcript_count?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          crm_match?: string | null
+          id?: string
+          last_seen_at?: string | null
+          notes?: string | null
+          original_name?: string
+          resolved_name?: string | null
+          status?: string | null
+          transcript_count?: number | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -1485,6 +1786,65 @@ export type Database = {
             columns: ["achievement_id"]
             isOneToOne: false
             referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_memories: {
+        Row: {
+          confidence: number | null
+          content: string
+          created_at: string
+          embedding: string | null
+          id: string
+          importance: number | null
+          is_active: boolean | null
+          last_accessed_at: string | null
+          memory_type: string
+          source: string | null
+          source_id: string | null
+          superseded_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          content: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          importance?: number | null
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          memory_type: string
+          source?: string | null
+          source_id?: string | null
+          superseded_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          content?: string
+          created_at?: string
+          embedding?: string | null
+          id?: string
+          importance?: number | null
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          memory_type?: string
+          source?: string | null
+          source_id?: string | null
+          superseded_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_memories_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "user_memories"
             referencedColumns: ["id"]
           },
         ]
@@ -2282,7 +2642,37 @@ export type Database = {
         }
         Returns: string
       }
+      delete_teacher_chat_session: {
+        Args: { p_session_id: string; p_user_id: string }
+        Returns: boolean
+      }
       generate_short_slug: { Args: never; Returns: string }
+      get_active_chat_session: {
+        Args: {
+          p_chat_type?: string
+          p_max_age_hours?: number
+          p_user_id: string
+        }
+        Returns: {
+          created_at: string
+          id: string
+          last_message_at: string
+          message_count: number
+          messages: Json
+          summary: string
+        }[]
+      }
+      get_active_teacher_session: {
+        Args: { p_max_age_hours?: number; p_user_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          message_count: number
+          messages: Json
+          title: string
+          updated_at: string
+        }[]
+      }
       get_analytics_overview: {
         Args: { p_end_date?: string; p_start_date?: string }
         Returns: Json
@@ -2295,9 +2685,49 @@ export type Database = {
         }
         Returns: Json
       }
+      get_database_size: {
+        Args: never
+        Returns: {
+          size_bytes: number
+          size_pretty: string
+        }[]
+      }
       get_short_link: {
         Args: { p_link_type: string; p_target_id: string }
         Returns: string
+      }
+      get_table_sizes: {
+        Args: never
+        Returns: {
+          table_name: string
+          total_bytes: number
+          total_size: string
+        }[]
+      }
+      get_teacher_chat_sessions: {
+        Args: { p_limit?: number; p_user_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          message_count: number
+          preview: string
+          title: string
+          updated_at: string
+        }[]
+      }
+      get_user_memory_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          achievements_count: number
+          avg_confidence: number
+          challenges_count: number
+          facts_count: number
+          goals_count: number
+          newest_memory: string
+          oldest_memory: string
+          preferences_count: number
+          total_memories: number
+        }[]
       }
       get_website_content_by_type: {
         Args: {
@@ -2331,6 +2761,26 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
+      is_teacher: { Args: never; Returns: boolean }
+      match_user_memories: {
+        Args: {
+          match_count?: number
+          match_threshold?: number
+          p_user_id: string
+          query_embedding: string
+        }
+        Returns: {
+          confidence: number
+          content: string
+          created_at: string
+          id: string
+          importance: number
+          last_accessed_at: string
+          memory_type: string
+          similarity: number
+        }[]
+      }
       refresh_analytics_views: { Args: never; Returns: undefined }
       resolve_short_link: {
         Args: { p_slug: string }
@@ -2394,6 +2844,7 @@ export type Database = {
           title: string
         }[]
       }
+      touch_memories: { Args: { memory_ids: string[] }; Returns: undefined }
     }
     Enums: {
       achievement_type:
@@ -2604,5 +3055,3 @@ export const Constants = {
     },
   },
 } as const
-A new version of Supabase CLI is available: v2.72.7 (currently installed v2.65.5)
-We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
