@@ -4,6 +4,8 @@ import {
   useGenerateImage,
   useGenerateCreativeImage,
   useGenerateVideo,
+  useGenerateVoice,
+  useGenerateAvatar,
   useDeleteAsset,
   useMarketingCostThisMonth,
   useMarketingScenarios,
@@ -52,10 +54,30 @@ import {
   FolderOpen,
   Settings,
   Wand2,
+  BookOpen,
+  AudioLines,
+  UserCircle,
+  Play,
+  Pause,
 } from "lucide-react";
+import NotebookLMTab from "@/components/admin/marketing/NotebookLMTab";
 import { cn } from "@/lib/utils";
 
-type StudioTab = "characters" | "creative" | "video" | "library" | "settings";
+type StudioTab = "characters" | "creative" | "video" | "voice" | "avatar" | "notebooklm" | "library" | "settings";
+
+/** Proxy Astria image URLs through our API to avoid CORS issues */
+function proxyImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === 'mp.astria.ai' || parsed.hostname === 'cdn.astria.ai' || parsed.hostname.endsWith('.amazonaws.com')) {
+      return `/api/image-proxy?url=${encodeURIComponent(url)}`;
+    }
+  } catch {
+    // not a valid URL, return as-is
+  }
+  return url;
+}
 
 const ASPECT_RATIOS = [
   { value: "1:1", label: "1:1 (ריבוע)" },
@@ -103,7 +125,7 @@ function AssetCard({ asset, onDelete }: { asset: MarketingAsset; onDelete: () =>
       <div className="aspect-square bg-muted relative">
         {asset.url ? (
           <img
-            src={asset.url}
+            src={proxyImageUrl(asset.url) || asset.url}
             alt={asset.title || "Generated asset"}
             className="w-full h-full object-cover"
           />
@@ -961,12 +983,584 @@ function VideoTab() {
   );
 }
 
+// Dialog for generating voice
+function GenerateVoiceDialog() {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [voiceName, setVoiceName] = useState("rachel");
+  const [stability, setStability] = useState(0.5);
+  const [title, setTitle] = useState("");
+
+  const generateVoice = useGenerateVoice();
+
+  const VOICE_OPTIONS = [
+    { value: "rachel", label: "Rachel (אנגלית)", emoji: "👩‍🦰" },
+    { value: "bella", label: "Bella (נשית)", emoji: "👩" },
+    { value: "josh", label: "Josh (גברית)", emoji: "👨" },
+  ];
+
+  const handleGenerate = async () => {
+    if (!text.trim()) return;
+
+    await generateVoice.mutateAsync({
+      text: text.trim(),
+      voice_name: voiceName,
+      stability,
+      title: title.trim() || undefined,
+    });
+
+    setOpen(false);
+    setText("");
+    setTitle("");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <AudioLines className="w-4 h-4" />
+          צור קול
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AudioLines className="w-5 h-5 text-green-500" />
+            יצירת קול עם ElevenLabs
+          </DialogTitle>
+          <DialogDescription>
+            הפוך טקסט לדיבור טבעי עם קולות AI
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Text Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">טקסט לקריינות *</label>
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="הכנס את הטקסט שברצונך להפוך לדיבור..."
+              rows={5}
+              className="resize-none"
+              maxLength={5000}
+            />
+            <p className="text-xs text-muted-foreground text-left">
+              {text.length}/5000 תווים
+            </p>
+          </div>
+
+          {/* Voice Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">בחר קול</label>
+            <div className="grid grid-cols-3 gap-2">
+              {VOICE_OPTIONS.map((voice) => (
+                <button
+                  key={voice.value}
+                  type="button"
+                  onClick={() => setVoiceName(voice.value)}
+                  className={cn(
+                    "p-3 rounded-lg border text-center transition-all",
+                    voiceName === voice.value
+                      ? "border-green-500 bg-green-50 dark:bg-green-950/30"
+                      : "border-muted hover:border-green-200"
+                  )}
+                >
+                  <div className="text-xl mb-1">{voice.emoji}</div>
+                  <div className="text-xs">{voice.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Settings */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">יציבות: {(stability * 100).toFixed(0)}%</label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={stability}
+                onChange={(e) => setStability(parseFloat(e.target.value))}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                נמוך = יותר אקספרסיבי, גבוה = יותר עקבי
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">כותרת</label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="שם לקובץ..."
+              />
+            </div>
+          </div>
+
+          {/* Estimated Cost */}
+          <div className="p-3 rounded-lg bg-muted/50 text-sm">
+            <div className="flex justify-between">
+              <span>עלות משוערת:</span>
+              <span className="font-medium">${((text.length / 1000) * 0.30).toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              ביטול
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={!text.trim() || generateVoice.isPending}
+              className="min-w-[120px]"
+            >
+              {generateVoice.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin ms-2" />
+                  יוצר...
+                </>
+              ) : (
+                <>
+                  <AudioLines className="w-4 h-4 ms-2" />
+                  צור קול
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Tab: Voice (ElevenLabs)
+function VoiceTab() {
+  const { data: assets, isLoading, refetch, isFetching } = useMarketingAssets();
+  const deleteAsset = useDeleteAsset();
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  // Filter only voice assets
+  const voiceAssets = assets?.filter(a => a.asset_type === "voice" || a.service === "elevenlabs") || [];
+
+  const togglePlay = (asset: MarketingAsset) => {
+    if (playingId === asset.id) {
+      setPlayingId(null);
+      // Stop audio
+      const audio = document.getElementById(`audio-${asset.id}`) as HTMLAudioElement;
+      audio?.pause();
+    } else {
+      // Stop any playing audio
+      if (playingId) {
+        const prevAudio = document.getElementById(`audio-${playingId}`) as HTMLAudioElement;
+        prevAudio?.pause();
+      }
+      setPlayingId(asset.id);
+      const audio = document.getElementById(`audio-${asset.id}`) as HTMLAudioElement;
+      audio?.play();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <AudioLines className="w-5 h-5 text-green-500" />
+            יצירת קול
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            קריינות וקולות AI עם ElevenLabs
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={cn("w-4 h-4 ms-2", isFetching && "animate-spin")} />
+            רענן
+          </Button>
+          <GenerateVoiceDialog />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : voiceAssets.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {voiceAssets.map((asset) => (
+            <Card key={asset.id} className="overflow-hidden">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-sm truncate">{asset.title || "ללא כותרת"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {asset.service} • {new Date(asset.created_at).toLocaleDateString("he-IL")}
+                    </p>
+                  </div>
+                  <StatusBadge status={asset.status} />
+                </div>
+
+                {asset.prompt && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">{asset.prompt}</p>
+                )}
+
+                {/* Audio Player */}
+                {asset.url && asset.status === "completed" && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 rounded-full bg-green-500 hover:bg-green-600 text-white"
+                      onClick={() => togglePlay(asset)}
+                    >
+                      {playingId === asset.id ? (
+                        <Pause className="w-4 h-4" />
+                      ) : (
+                        <Play className="w-4 h-4 ms-0.5" />
+                      )}
+                    </Button>
+                    <div className="flex-1">
+                      <div className="h-1 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-green-500 w-0" />
+                      </div>
+                    </div>
+                    <audio
+                      id={`audio-${asset.id}`}
+                      src={asset.url}
+                      onEnded={() => setPlayingId(null)}
+                    />
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-1 pt-1 justify-between">
+                  <Badge variant="outline">${asset.estimated_cost_usd.toFixed(2)}</Badge>
+                  <div className="flex gap-1">
+                    {asset.url && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                        <a href={asset.url} download>
+                          <Download className="w-3 h-3" />
+                        </a>
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={() => deleteAsset.mutate(asset.id)}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card className="py-12">
+          <CardContent className="text-center">
+            <AudioLines className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="font-medium text-lg mb-2">עדיין אין קבצי קול</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              צור קריינות וקולות AI מטקסט
+            </p>
+            <GenerateVoiceDialog />
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <AudioLines className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="font-medium">ElevenLabs - קולות AI מתקדמים</p>
+              <ul className="text-sm text-muted-foreground mt-2 space-y-1">
+                <li>• תמיכה בעברית עם מודל Multilingual v2</li>
+                <li>• קולות טבעיים ואקספרסיביים</li>
+                <li>• ~$0.30 ל-1000 תווים</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Dialog for generating avatar
+function GenerateAvatarDialog() {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [avatarId, setAvatarId] = useState("");
+  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16" | "1:1">("16:9");
+  const [background, setBackground] = useState("#FFFFFF");
+  const [title, setTitle] = useState("");
+
+  const generateAvatar = useGenerateAvatar();
+
+  const AVATAR_OPTIONS = [
+    { value: "josh_lite3_20230714", label: "Josh", emoji: "👨‍💼" },
+    { value: "anna_public_3_20240108", label: "Anna", emoji: "👩‍💼" },
+    { value: "monica_fitness_20230714", label: "Monica", emoji: "👩‍🦱" },
+  ];
+
+  const handleGenerate = async () => {
+    if (!text.trim()) return;
+
+    await generateAvatar.mutateAsync({
+      text: text.trim(),
+      avatar_id: avatarId || AVATAR_OPTIONS[0].value,
+      aspect_ratio: aspectRatio,
+      background,
+      title: title.trim() || undefined,
+    });
+
+    setOpen(false);
+    setText("");
+    setTitle("");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <UserCircle className="w-4 h-4" />
+          צור אווטר
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[500px]" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserCircle className="w-5 h-5 text-indigo-500" />
+            יצירת אווטר מדבר עם HeyGen
+          </DialogTitle>
+          <DialogDescription>
+            צור וידאו של אווטר שמדבר את הטקסט שלך
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Text Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">טקסט לדיבור *</label>
+            <Textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="הכנס את הטקסט שהאווטר יגיד..."
+              rows={4}
+              className="resize-none"
+              maxLength={3000}
+            />
+            <p className="text-xs text-muted-foreground text-left">
+              {text.length}/3000 תווים
+            </p>
+          </div>
+
+          {/* Avatar Selection */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">בחר אווטר</label>
+            <div className="grid grid-cols-3 gap-2">
+              {AVATAR_OPTIONS.map((avatar) => (
+                <button
+                  key={avatar.value}
+                  type="button"
+                  onClick={() => setAvatarId(avatar.value)}
+                  className={cn(
+                    "p-3 rounded-lg border text-center transition-all",
+                    (avatarId || AVATAR_OPTIONS[0].value) === avatar.value
+                      ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/30"
+                      : "border-muted hover:border-indigo-200"
+                  )}
+                >
+                  <div className="text-2xl mb-1">{avatar.emoji}</div>
+                  <div className="text-xs">{avatar.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Settings */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">יחס תמונה</label>
+              <Select value={aspectRatio} onValueChange={(v) => setAspectRatio(v as typeof aspectRatio)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="16:9">16:9 לרוחב</SelectItem>
+                  <SelectItem value="9:16">9:16 סטורי</SelectItem>
+                  <SelectItem value="1:1">1:1 ריבוע</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">רקע</label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={background}
+                  onChange={(e) => setBackground(e.target.value)}
+                  className="w-12 h-9 p-1 cursor-pointer"
+                />
+                <Input
+                  value={background}
+                  onChange={(e) => setBackground(e.target.value)}
+                  placeholder="#FFFFFF"
+                  className="flex-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">כותרת</label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="שם לוידאו..."
+            />
+          </div>
+
+          {/* Estimated Cost */}
+          <div className="p-3 rounded-lg bg-muted/50 text-sm">
+            <div className="flex justify-between">
+              <span>עלות משוערת:</span>
+              <span className="font-medium">
+                ${(Math.ceil(text.length / 150) * 0.75).toFixed(2)}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              ~{Math.ceil(text.length / 150)} דקות וידאו
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              ביטול
+            </Button>
+            <Button
+              onClick={handleGenerate}
+              disabled={!text.trim() || generateAvatar.isPending}
+              className="min-w-[120px]"
+            >
+              {generateAvatar.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin ms-2" />
+                  יוצר...
+                </>
+              ) : (
+                <>
+                  <UserCircle className="w-4 h-4 ms-2" />
+                  צור אווטר
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Tab: Avatar (HeyGen)
+function AvatarTab() {
+  const { data: assets, isLoading, refetch, isFetching } = useMarketingAssets();
+  const deleteAsset = useDeleteAsset();
+
+  // Filter only HeyGen avatar videos
+  const avatarAssets = assets?.filter(a => a.service === "heygen") || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <UserCircle className="w-5 h-5 text-indigo-500" />
+            אווטרים מדברים
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            וידאו של אווטרים AI עם HeyGen
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw className={cn("w-4 h-4 ms-2", isFetching && "animate-spin")} />
+            רענן
+          </Button>
+          <GenerateAvatarDialog />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : avatarAssets.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {avatarAssets.map((asset) => (
+            <AssetCard
+              key={asset.id}
+              asset={asset}
+              onDelete={() => deleteAsset.mutate(asset.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card className="py-12">
+          <CardContent className="text-center">
+            <UserCircle className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="font-medium text-lg mb-2">עדיין אין וידאו אווטר</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              צור וידאו של אווטר AI שמדבר את הטקסט שלך
+            </p>
+            <GenerateAvatarDialog />
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-indigo-500/10">
+              <UserCircle className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <p className="font-medium">HeyGen - אווטרים AI מציאותיים</p>
+              <ul className="text-sm text-muted-foreground mt-2 space-y-1">
+                <li>• אווטרים מציאותיים שמדברים כל שפה</li>
+                <li>• סנכרון שפתיים מושלם</li>
+                <li>• ~$0.75 לדקת וידאו</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Tab: Library (All assets with filtering)
 function LibraryTab() {
   const { data: assets, isLoading, refetch, isFetching } = useMarketingAssets();
   const { data: costData } = useMarketingCostThisMonth();
   const deleteAsset = useDeleteAsset();
-  const [filter, setFilter] = useState<"all" | "image" | "video">("all");
+  const [filter, setFilter] = useState<"all" | "image" | "video" | "voice">("all");
   const [search, setSearch] = useState("");
 
   const filteredAssets = assets?.filter(a => {
@@ -1040,6 +1634,7 @@ function LibraryTab() {
             <SelectItem value="all">הכל</SelectItem>
             <SelectItem value="image">תמונות</SelectItem>
             <SelectItem value="video">וידאו</SelectItem>
+            <SelectItem value="voice">קול</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -1196,6 +1791,28 @@ function SettingsTab() {
               </div>
               <Badge variant="outline">לא מחובר</Badge>
             </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 opacity-60">
+              <div className="p-2 rounded-lg bg-green-500/10">
+                <AudioLines className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm">ElevenLabs</p>
+                <p className="text-xs text-muted-foreground">יצירת קול AI</p>
+              </div>
+              <Badge variant="outline">לא מחובר</Badge>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 opacity-60">
+              <div className="p-2 rounded-lg bg-indigo-500/10">
+                <UserCircle className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm">HeyGen</p>
+                <p className="text-xs text-muted-foreground">אווטרים מדברים</p>
+              </div>
+              <Badge variant="outline">לא מחובר</Badge>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1232,7 +1849,7 @@ export default function AdminMarketing() {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as StudioTab)}>
-          <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsList className="grid w-full grid-cols-8 mb-6">
             <TabsTrigger value="characters" className="gap-2">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">דמויות</span>
@@ -1244,6 +1861,18 @@ export default function AdminMarketing() {
             <TabsTrigger value="video" className="gap-2">
               <Film className="w-4 h-4" />
               <span className="hidden sm:inline">וידאו</span>
+            </TabsTrigger>
+            <TabsTrigger value="voice" className="gap-2">
+              <AudioLines className="w-4 h-4" />
+              <span className="hidden sm:inline">קול</span>
+            </TabsTrigger>
+            <TabsTrigger value="avatar" className="gap-2">
+              <UserCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">אווטר</span>
+            </TabsTrigger>
+            <TabsTrigger value="notebooklm" className="gap-2">
+              <BookOpen className="w-4 h-4" />
+              <span className="hidden sm:inline">NotebookLM</span>
             </TabsTrigger>
             <TabsTrigger value="library" className="gap-2">
               <FolderOpen className="w-4 h-4" />
@@ -1265,6 +1894,18 @@ export default function AdminMarketing() {
 
           <TabsContent value="video">
             <VideoTab />
+          </TabsContent>
+
+          <TabsContent value="voice">
+            <VoiceTab />
+          </TabsContent>
+
+          <TabsContent value="avatar">
+            <AvatarTab />
+          </TabsContent>
+
+          <TabsContent value="notebooklm">
+            <NotebookLMTab />
           </TabsContent>
 
           <TabsContent value="library">
