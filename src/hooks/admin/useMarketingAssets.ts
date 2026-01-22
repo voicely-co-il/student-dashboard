@@ -52,6 +52,28 @@ export interface GenerateVideoParams {
   tags?: string[];
 }
 
+export interface GenerateVoiceParams {
+  text: string;
+  voice_id?: string;
+  voice_name?: string;
+  model_id?: string;
+  stability?: number;
+  similarity_boost?: number;
+  title?: string;
+  tags?: string[];
+}
+
+export interface GenerateAvatarParams {
+  text: string;
+  avatar_id?: string;
+  voice_id?: string;
+  voice_type?: "heygen" | "elevenlabs";
+  background?: string;
+  aspect_ratio?: "16:9" | "9:16" | "1:1";
+  title?: string;
+  tags?: string[];
+}
+
 // Fetch all marketing assets
 export function useMarketingAssets() {
   return useQuery({
@@ -173,6 +195,137 @@ export function useGenerateVideo() {
         variant: "destructive",
       });
     },
+  });
+}
+
+// Generate voice (ElevenLabs)
+export function useGenerateVoice() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (params: GenerateVoiceParams) => {
+      const { data, error } = await supabase.functions.invoke(
+        "generate-voice",
+        {
+          body: params,
+        }
+      );
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "יצירת קול",
+        description: data.status === "completed"
+          ? "הקול נוצר בהצלחה!"
+          : "יצירת הקול נכשלה",
+        variant: data.status === "completed" ? "default" : "destructive",
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "marketing-assets"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "שגיאה ביצירת קול",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+// Generate avatar video (HeyGen)
+export function useGenerateAvatar() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (params: GenerateAvatarParams) => {
+      const { data, error } = await supabase.functions.invoke(
+        "generate-avatar",
+        {
+          body: params,
+        }
+      );
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "יצירת אווטר החלה",
+        description: "הוידאו בתהליך יצירה, יעודכן בספרייה כשיהיה מוכן",
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "marketing-assets"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "שגיאה ביצירת אווטר",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+// Fetch available ElevenLabs voices
+export function useElevenLabsVoices() {
+  return useQuery({
+    queryKey: ["admin", "elevenlabs-voices"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("generate-voice", {
+        method: "GET",
+      });
+
+      if (error) throw error;
+      return data?.voices || [];
+    },
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+  });
+}
+
+// Fetch available HeyGen avatars
+export function useHeyGenAvatars() {
+  return useQuery({
+    queryKey: ["admin", "heygen-avatars"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-avatar?type=avatars`,
+        {
+          headers: {
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch avatars");
+      const data = await response.json();
+      return data?.avatars || [];
+    },
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+  });
+}
+
+// Fetch available HeyGen voices
+export function useHeyGenVoices() {
+  return useQuery({
+    queryKey: ["admin", "heygen-voices"],
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-avatar?type=voices`,
+        {
+          headers: {
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to fetch voices");
+      const data = await response.json();
+      return data?.voices || [];
+    },
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
   });
 }
 

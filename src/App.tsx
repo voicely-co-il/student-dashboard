@@ -24,6 +24,7 @@ import LiveChat from "./pages/LiveChat";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminResources from "./pages/admin/AdminResources";
 import AdminMarketing from "./pages/admin/AdminMarketing";
+import AdminCashflow from "./pages/admin/AdminCashflow";
 import AdminMemoryDebug from "./pages/admin/AdminMemoryDebug";
 import AdminNameResolution from "./pages/admin/AdminNameResolution";
 import ShortLinkResolver from "./pages/ShortLinkResolver";
@@ -232,6 +233,16 @@ const App = () => (
                 <AdminProtectedRoute>
                   <AdminLayout>
                     <AdminMarketing />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/cashflow"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminCashflow />
                   </AdminLayout>
                 </AdminProtectedRoute>
               }

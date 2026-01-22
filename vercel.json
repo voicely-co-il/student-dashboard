@@ -1,4 +1,10 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron/sync",
+      "schedule": "0 * * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/s/:slug", "destination": "/short/:slug" },
     { "source": "/l/:slug", "destination": "/short/:slug" },
@@ -23,6 +29,7 @@
       "has": [{ "type": "host", "value": "voicely-chatbot.vercel.app" }],
       "destination": "/chat"
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

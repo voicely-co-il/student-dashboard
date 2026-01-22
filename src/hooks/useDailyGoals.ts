@@ -37,13 +37,13 @@ export function useDailyGoals() {
         .eq('user_id', user.id)
         .gte('completed_at', today);
 
-      // Get today's lessons
+      // Get today's lessons (via lesson_participants)
       const { data: todayLessons } = await supabase
-        .from('lessons')
-        .select('*')
+        .from('lesson_participants')
+        .select('*, lesson:lessons!inner(*)')
         .eq('student_id', user.id)
-        .eq('status', 'completed')
-        .gte('scheduled_at', today);
+        .eq('lesson.status', 'completed')
+        .gte('lesson.scheduled_at', today);
 
       // Get today's recordings
       const { data: todayRecordings } = await supabase

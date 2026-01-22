@@ -417,6 +417,51 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_projects: {
+        Row: {
+          color: string | null
+          context_data: Json | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_archived: boolean | null
+          is_pinned: boolean | null
+          name: string
+          system_prompt: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          context_data?: Json | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_pinned?: boolean | null
+          name: string
+          system_prompt?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          context_data?: Json | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_archived?: boolean | null
+          is_pinned?: boolean | null
+          name?: string
+          system_prompt?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_sessions: {
         Row: {
           assigned_to: string | null
@@ -1118,6 +1163,75 @@ export type Database = {
           },
         ]
       }
+      notebooklm_content: {
+        Row: {
+          answer: string | null
+          content_type: string
+          content_url: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          duration_seconds: number | null
+          error_message: string | null
+          id: string
+          notebook_id: string
+          notebook_name: string | null
+          progress_percent: number | null
+          prompt: string | null
+          settings: Json | null
+          status: string | null
+          task_id: string | null
+          thumbnail_url: string | null
+          title: string | null
+          transcript: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          answer?: string | null
+          content_type: string
+          content_url?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          notebook_id: string
+          notebook_name?: string | null
+          progress_percent?: number | null
+          prompt?: string | null
+          settings?: Json | null
+          status?: string | null
+          task_id?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          answer?: string | null
+          content_type?: string
+          content_url?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          notebook_id?: string
+          notebook_name?: string | null
+          progress_percent?: number | null
+          prompt?: string | null
+          settings?: Json | null
+          status?: string | null
+          task_id?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          transcript?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notion_sync_log: {
         Row: {
           created_at: string | null
@@ -1387,6 +1501,7 @@ export type Database = {
           last_message_at: string | null
           message_count: number | null
           messages: Json | null
+          project_id: string | null
           status: string | null
           summary: string | null
           title: string | null
@@ -1402,6 +1517,7 @@ export type Database = {
           last_message_at?: string | null
           message_count?: number | null
           messages?: Json | null
+          project_id?: string | null
           status?: string | null
           summary?: string | null
           title?: string | null
@@ -1417,13 +1533,22 @@ export type Database = {
           last_message_at?: string | null
           message_count?: number | null
           messages?: Json | null
+          project_id?: string | null
           status?: string | null
           summary?: string | null
           title?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_chat_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "chat_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_name_mapping_history: {
         Row: {
@@ -2685,11 +2810,37 @@ export type Database = {
         }
         Returns: Json
       }
+      get_chat_projects: {
+        Args: { p_include_archived?: boolean; p_user_id: string }
+        Returns: {
+          color: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          is_pinned: boolean
+          last_activity: string
+          name: string
+          session_count: number
+          system_prompt: string
+        }[]
+      }
       get_database_size: {
         Args: never
         Returns: {
           size_bytes: number
           size_pretty: string
+        }[]
+      }
+      get_project_sessions: {
+        Args: { p_limit?: number; p_project_id: string; p_user_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          message_count: number
+          preview: string
+          title: string
+          updated_at: string
         }[]
       }
       get_short_link: {
@@ -3055,3 +3206,5 @@ export const Constants = {
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.72.7 (currently installed v2.65.5)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
