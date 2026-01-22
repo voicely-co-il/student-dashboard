@@ -1849,36 +1849,36 @@ export default function AdminMarketing() {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as StudioTab)}>
-          <TabsList className="grid w-full grid-cols-8 mb-6">
-            <TabsTrigger value="characters" className="gap-2">
+          <TabsList className="flex w-full overflow-x-auto mb-6">
+            <TabsTrigger value="characters" className="flex-1 gap-2">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">דמויות</span>
             </TabsTrigger>
-            <TabsTrigger value="creative" className="gap-2">
+            <TabsTrigger value="creative" className="flex-1 gap-2">
               <Palette className="w-4 h-4" />
               <span className="hidden sm:inline">יצירה</span>
             </TabsTrigger>
-            <TabsTrigger value="video" className="gap-2">
+            <TabsTrigger value="video" className="flex-1 gap-2">
               <Film className="w-4 h-4" />
               <span className="hidden sm:inline">וידאו</span>
             </TabsTrigger>
-            <TabsTrigger value="voice" className="gap-2">
+            <TabsTrigger value="voice" className="flex-1 gap-2">
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">קול</span>
             </TabsTrigger>
-            <TabsTrigger value="avatar" className="gap-2">
+            <TabsTrigger value="avatar" className="flex-1 gap-2">
               <UserCircle className="w-4 h-4" />
               <span className="hidden sm:inline">אווטר</span>
             </TabsTrigger>
-            <TabsTrigger value="notebooklm" className="gap-2">
+            <TabsTrigger value="notebooklm" className="flex-1 gap-2">
               <BookOpen className="w-4 h-4" />
               <span className="hidden sm:inline">NotebookLM</span>
             </TabsTrigger>
-            <TabsTrigger value="library" className="gap-2">
+            <TabsTrigger value="library" className="flex-1 gap-2">
               <FolderOpen className="w-4 h-4" />
               <span className="hidden sm:inline">ספרייה</span>
             </TabsTrigger>
-            <TabsTrigger value="settings" className="gap-2">
+            <TabsTrigger value="settings" className="flex-1 gap-2">
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">הגדרות</span>
             </TabsTrigger>
