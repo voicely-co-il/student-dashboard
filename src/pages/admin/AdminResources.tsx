@@ -153,7 +153,7 @@ function OverLimitAlert({ percent, resource }: { percent: number; resource: stri
   );
 }
 
-function TableSizesBreakdown({ tables }: { tables: TableSize[] }) {
+function TableSizesBreakdown({ tables, dbLimit }: { tables: TableSize[]; dbLimit: number }) {
   if (!tables || tables.length === 0) return null;
 
   const totalBytes = tables.reduce((acc, t) => acc + t.total_bytes, 0);
@@ -163,16 +163,16 @@ function TableSizesBreakdown({ tables }: { tables: TableSize[] }) {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Table className="w-5 h-5" />
-          פירוט טבלאות לפי גודל
+          חלוקת נפח לפי טבלאות
         </CardTitle>
         <CardDescription>
-          סה"כ: {formatBytes(totalBytes)}
+          סה"כ בשימוש: {formatBytes(totalBytes)} מתוך {formatBytes(dbLimit)} ({Math.round((totalBytes / dbLimit) * 100)}% מהמכסה)
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
           {tables.slice(0, 10).map((table) => {
-            const percent = Math.round((table.total_bytes / totalBytes) * 100);
+            const percentOfTotal = Math.round((table.total_bytes / totalBytes) * 100);
             return (
               <div key={table.table_name} className="flex items-center gap-2">
                 <div className="flex-1 min-w-0">
@@ -182,21 +182,21 @@ function TableSizesBreakdown({ tables }: { tables: TableSize[] }) {
                   </div>
                   <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
-                      className={cn(
-                        "h-full rounded-full",
-                        percent > 50 ? "bg-red-500" : percent > 20 ? "bg-amber-500" : "bg-emerald-500"
-                      )}
-                      style={{ width: `${percent}%` }}
+                      className="h-full rounded-full bg-blue-500"
+                      style={{ width: `${percentOfTotal}%` }}
                     />
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground w-10 text-left">{percent}%</span>
+                <span className="text-xs text-muted-foreground w-10 text-left">{percentOfTotal}%</span>
               </div>
             );
           })}
         </div>
+        <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+          האחוזים מייצגים את החלק של כל טבלה מתוך סה"כ הנתונים (לא מהמכסה)
+        </p>
         {tables.length > 10 && (
-          <p className="text-xs text-muted-foreground mt-3">
+          <p className="text-xs text-muted-foreground mt-1">
             ועוד {tables.length - 10} טבלאות נוספות...
           </p>
         )}
@@ -312,7 +312,7 @@ export default function AdminResources() {
               {/* Table sizes breakdown */}
               {data.supabase.tableSizes && data.supabase.tableSizes.length > 0 && (
                 <div className="mt-4">
-                  <TableSizesBreakdown tables={data.supabase.tableSizes} />
+                  <TableSizesBreakdown tables={data.supabase.tableSizes} dbLimit={data.supabase.database.sizeLimit} />
                 </div>
               )}
             </div>
