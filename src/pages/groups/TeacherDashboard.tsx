@@ -44,7 +44,7 @@ export default function TeacherDashboard() {
   const activeChallenge = challenges.find(c => c.status === 'active');
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 light">
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -105,9 +105,9 @@ export default function TeacherDashboard() {
         {/* Two Column Layout */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Students List */}
-          <Card>
+          <Card className="bg-white">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-semibold">
+              <CardTitle className="text-base font-semibold text-gray-900">
                 התלמידות שלך
               </CardTitle>
               <Button variant="ghost" size="sm" className="gap-1">
@@ -131,9 +131,9 @@ export default function TeacherDashboard() {
           </Card>
 
           {/* Challenges */}
-          <Card>
+          <Card className="bg-white">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-base font-semibold">
+              <CardTitle className="text-base font-semibold text-gray-900">
                 אתגרים
               </CardTitle>
               <Button
@@ -184,10 +184,10 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Weekly Analytics */}
-        <Card>
+        <Card className="bg-white">
           <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
+            <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-gray-700" />
               סטטיסטיקות שבועיות
             </CardTitle>
           </CardHeader>
@@ -282,17 +282,17 @@ function StatCard({ icon: Icon, label, value, total, trend, color, alert }: Stat
   };
 
   return (
-    <Card className={cn(alert && 'ring-2 ring-orange-400')}>
+    <Card className={cn('bg-white', alert && 'ring-2 ring-orange-400')}>
       <CardContent className="p-4">
         <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center mb-3', colors[color])}>
           <Icon className="h-5 w-5" />
         </div>
         <div className="flex items-end gap-1">
           <span className="text-2xl font-bold text-gray-900">{value}</span>
-          {total && <span className="text-gray-400 mb-0.5">/{total}</span>}
+          {total && <span className="text-gray-500 mb-0.5">/{total}</span>}
         </div>
         <div className="flex items-center justify-between mt-1">
-          <span className="text-sm text-gray-500">{label}</span>
+          <span className="text-sm text-gray-600">{label}</span>
           {trend !== undefined && (
             <span className={cn(
               'text-xs font-medium flex items-center gap-0.5',
@@ -418,12 +418,12 @@ interface MetricBoxProps {
 
 function MetricBox({ label, value, change, total, suffix = '' }: MetricBoxProps) {
   return (
-    <div className="p-4 bg-gray-50 rounded-lg">
-      <p className="text-sm text-gray-500 mb-1">{label}</p>
+    <div className="p-4 bg-gray-100 rounded-lg">
+      <p className="text-sm text-gray-600 mb-1">{label}</p>
       <div className="flex items-end gap-1">
         <span className="text-2xl font-bold text-gray-900">{value}</span>
-        {total && <span className="text-gray-400 mb-0.5">/{total}</span>}
-        {suffix && <span className="text-gray-500 mb-0.5">{suffix}</span>}
+        {total && <span className="text-gray-500 mb-0.5">/{total}</span>}
+        {suffix && <span className="text-gray-600 mb-0.5">{suffix}</span>}
       </div>
       {change !== undefined && (
         <div className={cn(

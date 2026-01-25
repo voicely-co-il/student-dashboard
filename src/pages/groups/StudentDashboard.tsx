@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { StudentLayout } from '@/components/groups/layout';
 import {
@@ -41,6 +42,18 @@ export default function StudentDashboard() {
   // Use demo student if in demo mode
   const student = isDemo ? DEMO_STUDENT : realStudent;
 
+  // Redirect logic (only when NOT in demo mode)
+  useEffect(() => {
+    if (isDemo) return; // Skip all redirects in demo mode
+    if (isLoadingStudent) return; // Wait for loading
+
+    if (!realStudent) {
+      navigate('/groups/register');
+    } else if (!realStudent.onboarding_completed) {
+      navigate('/groups/onboarding');
+    }
+  }, [isDemo, isLoadingStudent, realStudent, navigate]);
+
   // Loading state (skip in demo mode)
   if (!isDemo && isLoadingStudent) {
     return (
@@ -52,15 +65,8 @@ export default function StudentDashboard() {
     );
   }
 
-  // Redirect to registration if no student profile (skip in demo mode)
-  if (!isDemo && !student) {
-    navigate('/groups/register');
-    return null;
-  }
-
-  // Redirect to onboarding if not completed (skip in demo mode)
-  if (!isDemo && !student?.onboarding_completed) {
-    navigate('/groups/onboarding');
+  // Don't render if redirecting (not in demo mode and no valid student)
+  if (!isDemo && (!realStudent || !realStudent.onboarding_completed)) {
     return null;
   }
 
