@@ -59,11 +59,13 @@ import {
   UserCircle,
   Play,
   Pause,
+  ImagePlus,
 } from "lucide-react";
 import NotebookLMTab from "@/components/admin/marketing/NotebookLMTab";
+import LessonVisualsTab from "@/components/admin/marketing/LessonVisualsTab";
 import { cn } from "@/lib/utils";
 
-type StudioTab = "characters" | "creative" | "video" | "voice" | "avatar" | "notebooklm" | "library" | "settings";
+type StudioTab = "characters" | "creative" | "video" | "voice" | "avatar" | "notebooklm" | "visuals" | "library" | "settings";
 
 /** Proxy Astria image URLs through our API to avoid CORS issues */
 function proxyImageUrl(url: string | null | undefined): string | undefined {
@@ -1874,6 +1876,10 @@ export default function AdminMarketing() {
               <BookOpen className="w-4 h-4" />
               <span className="hidden sm:inline">NotebookLM</span>
             </TabsTrigger>
+            <TabsTrigger value="visuals" className="flex-1 gap-2">
+              <ImagePlus className="w-4 h-4" />
+              <span className="hidden sm:inline">תמונות</span>
+            </TabsTrigger>
             <TabsTrigger value="library" className="flex-1 gap-2">
               <FolderOpen className="w-4 h-4" />
               <span className="hidden sm:inline">ספרייה</span>
@@ -1906,6 +1912,10 @@ export default function AdminMarketing() {
 
           <TabsContent value="notebooklm">
             <NotebookLMTab />
+          </TabsContent>
+
+          <TabsContent value="visuals">
+            <LessonVisualsTab />
           </TabsContent>
 
           <TabsContent value="library">
