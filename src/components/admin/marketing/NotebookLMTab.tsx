@@ -1,16 +1,20 @@
 import { useState, useMemo } from "react";
 import {
   useNotebookLMContent,
-  useGenerateFromContent,
-  useGenerateFromTranscripts,
   useDeleteNotebookLMContent,
   usePendingCount,
-  useProcessQueue,
   useTranscripts,
   useTranscriptStudents,
   NotebookLMContent,
   TranscriptItem,
 } from "@/hooks/admin/useNotebookLM";
+import {
+  useGenerateFromContentUnified,
+  useGenerateFromTranscriptsUnified,
+  useProcessQueueUnified,
+  useNotebookLMBackendStatus,
+} from "@/hooks/admin/useNotebookLMUnified";
+import { NotebookLMSettingsDialog, NotebookLMStatusBadge } from "./NotebookLMSettings";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -487,7 +491,7 @@ function TranscriptPickerDialog({
 
   const { data: transcripts = [], isLoading } = useTranscripts(search || undefined);
   const { data: students = [] } = useTranscriptStudents();
-  const generateFromTranscripts = useGenerateFromTranscripts();
+  const generateFromTranscripts = useGenerateFromTranscriptsUnified();
 
   const filteredTranscripts = useMemo(() => {
     if (studentFilter === "all") return transcripts;
@@ -720,10 +724,11 @@ export default function NotebookLMTab() {
     filter === "all" ? undefined : filter
   );
 
-  const generateFromContent = useGenerateFromContent();
+  const generateFromContent = useGenerateFromContentUnified();
   const deleteContent = useDeleteNotebookLMContent();
-  const processQueue = useProcessQueue();
+  const processQueue = useProcessQueueUnified();
   const { data: pendingCount = 0 } = usePendingCount();
+  const { status: backendStatus } = useNotebookLMBackendStatus();
 
   const handleGenerate = (params: {
     title: string;
@@ -744,6 +749,7 @@ export default function NotebookLMTab() {
           <h2 className="text-xl font-bold flex items-center gap-2">
             <BookOpen className="w-5 h-5" />
             NotebookLM Studio
+            <NotebookLMStatusBadge />
           </h2>
           <p className="text-sm text-muted-foreground">
             צור פודקסטים, מצגות ואינפוגרפיקות מתמלולי שיעורים
@@ -751,6 +757,7 @@ export default function NotebookLMTab() {
         </div>
 
         <div className="flex items-center gap-2">
+          <NotebookLMSettingsDialog />
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -813,8 +820,9 @@ export default function NotebookLMTab() {
               variant="default"
               size="sm"
               onClick={() => processQueue.mutate()}
-              disabled={processQueue.isPending}
+              disabled={processQueue.isPending || !backendStatus?.activeBackend}
               className="gap-1"
+              title={!backendStatus?.activeBackend ? "הפעל backend בהגדרות" : undefined}
             >
               {processQueue.isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -870,8 +878,6 @@ export default function NotebookLMTab() {
         </Card>
       )}
 
-      {/* Setup Guide */}
-      <SetupGuide />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { StudentLayout } from '@/components/groups/layout';
 import {
   NextLessonCard,
@@ -11,6 +11,18 @@ import { useGroupStudent, useDailyPlan, useActiveChallenge, useChallengeLeaderbo
 import { Loader2 } from 'lucide-react';
 import { ExerciseWithProgress } from '@/types/groups';
 
+// Demo student data for testing
+const DEMO_STUDENT = {
+  id: '2cb0f5bf-c53b-44d6-a1ba-05b1d59f0291',
+  student_name: 'תלמיד דמו',
+  avatar_emoji: '🎤',
+  current_streak: 5,
+  total_xp: 500,
+  current_level: 3,
+  onboarding_completed: true,
+  age_group: '10-12' as const,
+};
+
 // =====================================================
 // STUDENT DASHBOARD PAGE
 // Main dashboard for group students
@@ -18,13 +30,19 @@ import { ExerciseWithProgress } from '@/types/groups';
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
-  const { student, isLoading: isLoadingStudent } = useGroupStudent();
+  const [searchParams] = useSearchParams();
+  const isDemo = searchParams.get('demo') === 'true';
+
+  const { student: realStudent, isLoading: isLoadingStudent } = useGroupStudent();
   const { exercises, progress, isLoading: isLoadingPlan } = useDailyPlan();
   const { data: activeChallenge, isLoading: isLoadingChallenge } = useActiveChallenge();
   const { data: leaderboardData } = useChallengeLeaderboard(activeChallenge?.id);
 
-  // Loading state
-  if (isLoadingStudent) {
+  // Use demo student if in demo mode
+  const student = isDemo ? DEMO_STUDENT : realStudent;
+
+  // Loading state (skip in demo mode)
+  if (!isDemo && isLoadingStudent) {
     return (
       <StudentLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -34,14 +52,14 @@ export default function StudentDashboard() {
     );
   }
 
-  // Redirect to registration if no student profile
-  if (!student) {
+  // Redirect to registration if no student profile (skip in demo mode)
+  if (!isDemo && !student) {
     navigate('/groups/register');
     return null;
   }
 
-  // Redirect to onboarding if not completed
-  if (!student.onboarding_completed) {
+  // Redirect to onboarding if not completed (skip in demo mode)
+  if (!isDemo && !student?.onboarding_completed) {
     navigate('/groups/onboarding');
     return null;
   }

@@ -53,6 +53,7 @@ export default function AdminCashflow() {
       : settings.opening_balance_monthly || "0"
   );
   const alertMinimum = parseFloat(settings.alert_minimum || "0");
+  const vatRate = parseFloat(settings.vat_rate || "0.18");
 
   // Calculate summary values
   const summaryValues = useMemo(() => {
@@ -219,6 +220,7 @@ export default function AdminCashflow() {
         alertMinimum={alertMinimum}
         periodCount={currentPeriods.length}
         periodType={activeTab}
+        vatRate={vatRate}
       />
     </div>
   );

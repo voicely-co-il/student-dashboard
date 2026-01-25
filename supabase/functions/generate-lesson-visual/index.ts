@@ -124,69 +124,63 @@ async function extractVisualPrompt(
   };
 }
 
-// Generate image with Gemini
-async function generateImageWithGemini(
+// Generate image with DALL-E 3
+async function generateImageWithDallE(
   prompt: string,
-  geminiKey: string,
+  openaiKey: string,
   style: string,
   aspectRatio: string
 ): Promise<{ imageUrl: string; revisedPrompt?: string }> {
-  // Gemini-optimized style modifiers (following best practices)
+  // DALL-E style modifiers
   const styleModifiers: Record<string, string> = {
-    cartoon: "Vibrant colorful cartoon illustration. Bright teal and coral accents. Playful, celebratory mood. 85mm portrait lens perspective. Soft bokeh background.",
-    watercolor: "Soft watercolor painting style. Gentle pastel colors with teal and coral highlights. Dreamy, artistic atmosphere. Natural light filtering through.",
-    realistic: "Photorealistic high quality image. Professional studio lighting with dramatic backlight. Shallow depth of field. 4K cinematic look.",
-    minimalist: "Clean minimalist modern illustration. Simple geometric shapes. Bold teal (#00C6AE) and coral (#FF6F61) color palette. Lots of white space.",
+    cartoon: "Vibrant colorful cartoon illustration style. Bright teal and coral accents. Playful, celebratory mood. Cute and expressive characters.",
+    watercolor: "Soft watercolor painting style. Gentle pastel colors with teal and coral highlights. Dreamy, artistic atmosphere.",
+    realistic: "Photorealistic high quality image. Professional studio lighting. Shallow depth of field. Cinematic look.",
+    minimalist: "Clean minimalist modern illustration. Simple geometric shapes. Bold teal and coral color palette. Lots of white space.",
   };
 
-  // Gemini works best with natural language, no keyword spam
-  const fullPrompt = `${prompt} ${styleModifiers[style] || styleModifiers.cartoon} Important: No text, words, or letters anywhere in the image.`;
+  // Map aspect ratio to DALL-E 3 sizes
+  const sizeMap: Record<string, string> = {
+    "1:1": "1024x1024",
+    "16:9": "1792x1024",
+    "9:16": "1024x1792",
+  };
 
-  // Gemini 2.5 Flash with image generation
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiKey}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: `Generate an image: ${fullPrompt}`,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseModalities: ["TEXT", "IMAGE"],
-        },
-      }),
-    }
-  );
+  const fullPrompt = `${prompt} Style: ${styleModifiers[style] || styleModifiers.cartoon} Important: No text, words, letters, or writing anywhere in the image.`;
+
+  const response = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${openaiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "dall-e-3",
+      prompt: fullPrompt,
+      n: 1,
+      size: sizeMap[aspectRatio] || "1024x1024",
+      quality: "standard",
+      response_format: "b64_json",
+    }),
+  });
 
   if (!response.ok) {
     const error = await response.text();
-    console.error("Gemini error:", error);
-    throw new Error(`Gemini API error: ${response.status}`);
+    console.error("DALL-E error:", error);
+    throw new Error(`DALL-E API error: ${response.status}`);
   }
 
   const data = await response.json();
 
-  // Extract image from response
-  const parts = data.candidates?.[0]?.content?.parts || [];
-  const imagePart = parts.find((p: { inlineData?: { mimeType: string; data: string } }) => p.inlineData?.mimeType?.startsWith("image/"));
-
-  if (!imagePart?.inlineData) {
+  if (!data.data?.[0]?.b64_json) {
     throw new Error("No image generated");
   }
 
   // Return base64 data URL
-  const imageUrl = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`;
+  const imageUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+  const revisedPrompt = data.data[0].revised_prompt;
 
-  return { imageUrl };
+  return { imageUrl, revisedPrompt };
 }
 
 // Upload image to Supabase Storage
@@ -208,8 +202,9 @@ async function uploadToStorage(
     });
 
   if (error) {
-    console.error("Storage upload error:", error);
-    throw new Error("Failed to upload image");
+    console.error("Storage upload error:", JSON.stringify(error));
+    console.error("Upload details - filename:", filename, "mimeType:", mimeType, "size:", binaryData.length);
+    throw new Error(`Failed to upload image: ${error.message}`);
   }
 
   // Get public URL
@@ -246,31 +241,41 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify user
+    // Verify user (or service role)
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Check if this is the service role key (for internal calls)
+    const isServiceRole = token === supabaseKey;
+    let userId: string | null = null; // Will be set to user.id or null for service role
+
+    if (!isServiceRole) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: "Invalid token" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      userId = user.id;
+
+      // Check admin/instructor role
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .in("role", ["admin", "instructor"])
+        .limit(1);
+
+      if (!roleData || roleData.length === 0) {
+        return new Response(JSON.stringify({ error: "Instructor or admin access required" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
-
-    // Check admin/instructor role
-    const { data: roleData } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .in("role", ["admin", "instructor"])
-      .limit(1);
-
-    if (!roleData || roleData.length === 0) {
-      return new Response(JSON.stringify({ error: "Instructor or admin access required" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Service role bypasses role check (for internal use)
 
     // Parse request
     const body: GenerateRequest = await req.json();
@@ -293,7 +298,7 @@ Deno.serve(async (req) => {
     if (transcript_id && !lesson_content) {
       const { data: transcript, error: transcriptError } = await supabase
         .from("transcripts")
-        .select("content, student_name, lesson_date")
+        .select("full_text, student_name, lesson_date")
         .eq("id", transcript_id)
         .single();
 
@@ -304,7 +309,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      content = transcript.content;
+      content = transcript.full_text;
       studentNameFinal = transcript.student_name || studentNameFinal;
       lessonDateFinal = transcript.lesson_date ? new Date(transcript.lesson_date) : lessonDateFinal;
     }
@@ -318,10 +323,9 @@ Deno.serve(async (req) => {
 
     // Get API keys
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 
-    if (!OPENAI_API_KEY || !GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "API keys not configured" }), {
+    if (!OPENAI_API_KEY) {
+      return new Response(JSON.stringify({ error: "OpenAI API key not configured" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -336,10 +340,10 @@ Deno.serve(async (req) => {
         lesson_date: lessonDateFinal.toISOString().split("T")[0],
         source_text: content.slice(0, 2000),
         prompt: "Generating...",
-        model: "gemini-2.0-flash",
+        model: "dall-e-3",
         settings: { style, aspect_ratio },
         status: "generating",
-        created_by: user.id,
+        created_by: userId,
       })
       .select("id")
       .single();
@@ -393,18 +397,28 @@ Deno.serve(async (req) => {
         })
         .eq("id", visual.id);
 
-      // Step 2: Generate image with Gemini
-      console.log("Generating image with Gemini...");
-      const { imageUrl: imageDataUrl } = await generateImageWithGemini(
+      // Step 2: Generate image with DALL-E 3
+      console.log("Generating image with DALL-E 3...");
+      const { imageUrl: imageDataUrl, revisedPrompt } = await generateImageWithDallE(
         imagePrompt,
-        GEMINI_API_KEY,
+        OPENAI_API_KEY,
         style,
         aspect_ratio
       );
 
+      // Log the revised prompt for debugging
+      if (revisedPrompt) {
+        console.log("DALL-E revised prompt:", revisedPrompt);
+      }
+
       // Step 3: Upload to storage
       console.log("Uploading to storage...");
-      const filename = `${studentNameFinal.replace(/\s+/g, "-")}-${lessonDateFinal.toISOString().split("T")[0]}-${visual.id.slice(0, 8)}.png`;
+      // Use only ASCII characters in filename to avoid storage issues
+      const safeStudentName = studentNameFinal
+        .replace(/[^\w\s-]/g, "") // Remove non-word characters except spaces and dashes
+        .replace(/\s+/g, "-") // Replace spaces with dashes
+        .toLowerCase() || "student";
+      const filename = `visual-${lessonDateFinal.toISOString().split("T")[0]}-${visual.id.slice(0, 8)}.png`;
       const publicUrl = await uploadToStorage(supabase, imageDataUrl, filename);
 
       // Update record with final URL

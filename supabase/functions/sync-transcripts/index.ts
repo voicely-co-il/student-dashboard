@@ -8,8 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Google Drive API
-const GDRIVE_FOLDER_ID = "1phKpNENjzPvc7FvMdJaySoFWVIu797f1"; // תמלולים עדכניים
+// Google Drive API - Search for Transcript documents across entire Drive
+// Previously used folder: 1phKpNENjzPvc7FvMdJaySoFWVIu797f1 (תמלולים עדכניים)
 
 interface DriveFile {
   id: string;
@@ -109,9 +109,9 @@ Deno.serve(async (req) => {
     const access_token = await getAccessToken();
     console.log("Successfully obtained Google access token");
 
-    // List files from Google Drive folder
+    // Search for Transcript documents across entire Drive
     const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
-    listUrl.searchParams.set("q", `'${GDRIVE_FOLDER_ID}' in parents and mimeType='application/vnd.google-apps.document'`);
+    listUrl.searchParams.set("q", "name contains 'Transcript:' and mimeType='application/vnd.google-apps.document'");
     listUrl.searchParams.set("fields", "files(id,name,mimeType,modifiedTime,createdTime)");
     listUrl.searchParams.set("pageSize", "100");
     listUrl.searchParams.set("orderBy", "modifiedTime desc");
@@ -155,12 +155,12 @@ Deno.serve(async (req) => {
         const studentName = extractStudentName(file.name);
         const lessonDate = extractLessonDate(file.name, file.modifiedTime);
 
-        // Insert transcript
+        // Insert transcript (use file.name directly since it already starts with "Transcript:")
         const { error: insertError } = await supabase
           .from("transcripts")
           .insert({
             gdrive_file_id: file.id,
-            title: `Transcript: ${file.name}`,
+            title: file.name,
             full_text: fullText,
             student_name: studentName,
             lesson_date: lessonDate,
