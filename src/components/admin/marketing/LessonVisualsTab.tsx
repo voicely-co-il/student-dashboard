@@ -4,7 +4,12 @@ import {
   useRecentVisuals,
   useGenerateVisual,
   useDeleteVisual,
+  useLessonSuggestions,
+  useGenerateFromSuggestion,
+  useSurpriseMe,
   LessonVisual,
+  VisualSuggestion,
+  TranscriptSuggestion,
 } from "@/hooks/admin/useLessonVisuals";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +48,20 @@ import {
   Check,
   X,
   Eye,
+  Lightbulb,
+  Zap,
+  Shuffle,
+  TrendingUp,
+  Heart,
+  Trophy,
+  Target,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  Star,
+  Hash,
+  Copy,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -190,6 +209,300 @@ function VisualCard({ visual, onDelete }: { visual: LessonVisual; onDelete: () =
         </Dialog>
       )}
     </>
+  );
+}
+
+// Angle icons and colors
+const ANGLE_CONFIG: Record<string, { icon: typeof Heart; color: string; label: string }> = {
+  TRANSFORMATION: { icon: TrendingUp, color: "text-purple-500", label: "טרנספורמציה" },
+  VICTORY: { icon: Trophy, color: "text-yellow-500", label: "ניצחון" },
+  EMOTION: { icon: Heart, color: "text-pink-500", label: "רגש" },
+  TECHNIQUE: { icon: Target, color: "text-blue-500", label: "טכניקה" },
+  COMMUNITY: { icon: Users, color: "text-green-500", label: "קהילה" },
+};
+
+function SuggestionCard({
+  suggestion,
+  transcript,
+  onGenerate,
+  isGenerating,
+}: {
+  suggestion: VisualSuggestion;
+  transcript: TranscriptSuggestion;
+  onGenerate: () => void;
+  isGenerating: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const angleConfig = ANGLE_CONFIG[suggestion.angle] || ANGLE_CONFIG.EMOTION;
+  const AngleIcon = angleConfig.icon;
+
+  const copyCaption = () => {
+    navigator.clipboard.writeText(
+      `${suggestion.caption_he}\n\n${suggestion.hashtags.join(" ")}`
+    );
+  };
+
+  return (
+    <Card className="overflow-hidden hover:shadow-md transition-shadow">
+      <CardContent className="p-4 space-y-3">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="secondary"
+                className={cn("gap-1", angleConfig.color.replace("text-", "bg-").replace("500", "100"))}
+              >
+                <AngleIcon className={cn("w-3 h-3", angleConfig.color)} />
+                {angleConfig.label}
+              </Badge>
+              <Badge variant="outline" className="gap-1">
+                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                {suggestion.score.toFixed(1)}
+              </Badge>
+            </div>
+            <h4 className="font-semibold text-sm">{suggestion.title_he}</h4>
+          </div>
+          <Button
+            size="sm"
+            onClick={onGenerate}
+            disabled={isGenerating}
+            className="shrink-0 gap-1"
+          >
+            {isGenerating ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Wand2 className="w-3 h-3" />
+            )}
+            צור
+          </Button>
+        </div>
+
+        {/* Hook */}
+        <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded-md">
+          💡 {suggestion.hook_he}
+        </p>
+
+        {/* Expand/Collapse */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-xs"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? (
+            <>
+              <ChevronUp className="w-3 h-3 ms-1" />
+              הסתר פרטים
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-3 h-3 ms-1" />
+              הצג prompt וקפשן
+            </>
+          )}
+        </Button>
+
+        {/* Expanded details */}
+        {expanded && (
+          <div className="space-y-3 pt-2 border-t">
+            {/* Image Prompt */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Prompt לתמונה:</label>
+              <p className="text-xs bg-zinc-100 dark:bg-zinc-800 p-2 rounded-md font-mono" dir="ltr">
+                {suggestion.image_prompt}
+              </p>
+            </div>
+
+            {/* Caption */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-muted-foreground">קפשן לפוסט:</label>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={copyCaption}>
+                  <Copy className="w-3 h-3" />
+                </Button>
+              </div>
+              <p className="text-xs bg-emerald-50 dark:bg-emerald-950/30 p-2 rounded-md">
+                {suggestion.caption_he}
+              </p>
+            </div>
+
+            {/* Hashtags */}
+            <div className="flex flex-wrap gap-1">
+              {suggestion.hashtags.map((tag) => (
+                <Badge key={tag} variant="outline" className="text-[10px]">
+                  <Hash className="w-2 h-2 ms-0.5" />
+                  {tag.replace("#", "")}
+                </Badge>
+              ))}
+            </div>
+
+            {/* Why Viral */}
+            <p className="text-[10px] text-muted-foreground italic">
+              🚀 {suggestion.why_viral}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function SmartSuggestionsSection() {
+  const { data: suggestionsData, isLoading, refetch, isFetching } = useLessonSuggestions({ days: 7, limit: 5 });
+  const generateFromSuggestion = useGenerateFromSuggestion();
+  const surpriseMe = useSurpriseMe();
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [surpriseResult, setSurpriseResult] = useState<{
+    transcript: TranscriptSuggestion;
+    suggestion: VisualSuggestion;
+  } | null>(null);
+
+  const handleGenerate = async (
+    transcript: TranscriptSuggestion,
+    suggestion: VisualSuggestion
+  ) => {
+    const id = `${transcript.transcript_id}-${suggestion.title_he}`;
+    setGeneratingId(id);
+    try {
+      await generateFromSuggestion.mutateAsync({
+        transcript_id: transcript.transcript_id,
+        suggestion,
+        student_name: transcript.student_name,
+        lesson_date: transcript.lesson_date,
+        style: "cartoon",
+      });
+    } finally {
+      setGeneratingId(null);
+    }
+  };
+
+  const handleSurprise = async () => {
+    const result = await surpriseMe.mutateAsync();
+    setSurpriseResult(result);
+  };
+
+  return (
+    <Card className="bg-gradient-to-br from-violet-50 via-fuchsia-50 to-pink-50 dark:from-violet-950/30 dark:via-fuchsia-950/30 dark:to-pink-950/30 border-violet-200/50">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500">
+              <Lightbulb className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-base">הצעות חכמות 🧠</CardTitle>
+              <CardDescription className="text-xs">
+                רעיונות יצירתיים לתמונות שיווקיות משיעורים אחרונים
+              </CardDescription>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="gap-1"
+            >
+              <RefreshCw className={cn("w-3 h-3", isFetching && "animate-spin")} />
+              רענן
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSurprise}
+              disabled={surpriseMe.isPending}
+              className="gap-1 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600"
+            >
+              {surpriseMe.isPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Shuffle className="w-3 h-3" />
+              )}
+              הפתע אותי!
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Surprise Result */}
+        {surpriseResult && (
+          <Card className="border-2 border-violet-300 dark:border-violet-700 bg-white dark:bg-zinc-900">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-violet-600">
+                <Rocket className="w-4 h-4" />
+                הפתעה! רגע מיוחד מהשיעור של {surpriseResult.transcript.student_name}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {surpriseResult.transcript.key_achievement}
+              </p>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <SuggestionCard
+                suggestion={surpriseResult.suggestion}
+                transcript={surpriseResult.transcript}
+                onGenerate={() => handleGenerate(surpriseResult.transcript, surpriseResult.suggestion)}
+                isGenerating={generatingId === `${surpriseResult.transcript.transcript_id}-${surpriseResult.suggestion.title_he}`}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-violet-500" />
+            <span className="text-sm text-muted-foreground ms-2">מחפש רגעים מיוחדים...</span>
+          </div>
+        )}
+
+        {/* Suggestions List */}
+        {suggestionsData?.suggestions && suggestionsData.suggestions.length > 0 ? (
+          <div className="space-y-6">
+            {suggestionsData.suggestions.map((transcript) => (
+              <div key={transcript.transcript_id} className="space-y-3">
+                {/* Transcript Header */}
+                <div className="flex items-center gap-2 px-1">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-medium text-sm">{transcript.student_name}</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {new Date(transcript.lesson_date).toLocaleDateString("he-IL")}
+                  </Badge>
+                  {transcript.key_achievement && (
+                    <span className="text-xs text-muted-foreground truncate flex-1">
+                      • {transcript.key_achievement}
+                    </span>
+                  )}
+                </div>
+
+                {/* Suggestions Grid */}
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {transcript.suggestions.slice(0, 3).map((suggestion, idx) => (
+                    <SuggestionCard
+                      key={`${transcript.transcript_id}-${idx}`}
+                      suggestion={suggestion}
+                      transcript={transcript}
+                      onGenerate={() => handleGenerate(transcript, suggestion)}
+                      isGenerating={generatingId === `${transcript.transcript_id}-${suggestion.title_he}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : !isLoading ? (
+          <div className="text-center py-6">
+            <Lightbulb className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              אין שיעורים אחרונים לניתוח
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              נסה להרחיב את טווח החיפוש או הוסף תמלולים חדשים
+            </p>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -399,13 +712,16 @@ export default function LessonVisualsTab() {
         </div>
       </div>
 
+      {/* Smart Suggestions Section */}
+      <SmartSuggestionsSection />
+
       {/* Recent Visuals (Quick Preview) */}
       {recentVisuals && recentVisuals.length > 0 && (
         <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               <Clock className="w-4 h-4" />
-              אחרונות
+              תמונות אחרונות
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -483,13 +799,35 @@ export default function LessonVisualsTab() {
               <Sparkles className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <p className="font-medium">איך זה עובד?</p>
+              <p className="font-medium">איך המערכת החכמה עובדת?</p>
               <ul className="text-sm text-muted-foreground mt-2 space-y-1">
-                <li>1. הכנס תמלול או סיכום מהשיעור</li>
-                <li>2. GPT-4o מחלץ נקודות מפתח ויזואליות</li>
-                <li>3. Gemini מייצר תמונה מחזקת ומעודדת</li>
-                <li>4. התמונה נשמרת בגלריית התלמיד</li>
+                <li>🧠 <strong>הצעות חכמות:</strong> AI מנתח שיעורים אחרונים ומציע רעיונות ויראליים</li>
+                <li>🎲 <strong>הפתע אותי:</strong> בוחר רגע מיוחד אקראי משיעור</li>
+                <li>📱 <strong>מוכן לסושיאל:</strong> קפשן והאשטגים מוכנים לפרסום</li>
+                <li>✨ <strong>Gemini Imagen:</strong> תמונות איכותיות בעלות נמוכה (~$0.04)</li>
               </ul>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Badge variant="outline" className="gap-1 text-purple-600 border-purple-200">
+                  <TrendingUp className="w-3 h-3" />
+                  טרנספורמציה
+                </Badge>
+                <Badge variant="outline" className="gap-1 text-yellow-600 border-yellow-200">
+                  <Trophy className="w-3 h-3" />
+                  ניצחון
+                </Badge>
+                <Badge variant="outline" className="gap-1 text-pink-600 border-pink-200">
+                  <Heart className="w-3 h-3" />
+                  רגש
+                </Badge>
+                <Badge variant="outline" className="gap-1 text-blue-600 border-blue-200">
+                  <Target className="w-3 h-3" />
+                  טכניקה
+                </Badge>
+                <Badge variant="outline" className="gap-1 text-green-600 border-green-200">
+                  <Users className="w-3 h-3" />
+                  קהילה
+                </Badge>
+              </div>
             </div>
           </div>
         </CardContent>

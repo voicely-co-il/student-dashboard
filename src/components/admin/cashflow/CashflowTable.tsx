@@ -216,7 +216,7 @@ export default function CashflowTable({
           {/* Period headers */}
           <tr className="bg-muted/50">
             <th className="sticky right-0 z-10 bg-muted/50 text-right px-3 py-2 text-sm font-medium border-b border-l w-[180px] min-w-[180px]">
-              קטגוריה
+              Category
             </th>
             {periods.map((period) => (
               <th
@@ -232,7 +232,7 @@ export default function CashflowTable({
           {/* Opening Balance Row */}
           <tr className="bg-blue-50 dark:bg-blue-900/20">
             <td className="sticky right-0 z-10 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-sm font-semibold border-b border-l">
-              יתרת פתיחה
+              Opening Balance
             </td>
             {calculations.map((calc) => (
               <td key={calc.period} className="px-1 py-1.5 border-b border-l">
@@ -247,7 +247,7 @@ export default function CashflowTable({
               colSpan={periods.length + 1}
               className="px-3 py-1.5 text-sm font-bold text-green-700 dark:text-green-300 border-b"
             >
-              הכנסות
+              Income
             </td>
           </tr>
 
@@ -271,7 +271,7 @@ export default function CashflowTable({
           {/* Total Income */}
           <tr className="bg-green-50/50 dark:bg-green-900/10 font-semibold">
             <td className="sticky right-0 z-10 bg-green-50/50 dark:bg-green-900/10 px-3 py-1.5 text-sm border-b border-l">
-              סה״כ הכנסות
+              Total Income
             </td>
             {calculations.map((calc) => (
               <td key={calc.period} className="px-1 py-1.5 border-b border-l">
@@ -283,7 +283,7 @@ export default function CashflowTable({
           {/* Total Available */}
           <tr className="bg-blue-50/50 dark:bg-blue-900/10 font-semibold">
             <td className="sticky right-0 z-10 bg-blue-50/50 dark:bg-blue-900/10 px-3 py-1.5 text-sm border-b border-l">
-              סה״כ מזומנים זמינים
+              Total Cash Available
             </td>
             {calculations.map((calc) => (
               <td key={calc.period} className="px-1 py-1.5 border-b border-l">
@@ -298,7 +298,7 @@ export default function CashflowTable({
               colSpan={periods.length + 1}
               className="px-3 py-1.5 text-sm font-bold text-red-700 dark:text-red-300 border-b"
             >
-              הוצאות
+              Expenses
             </td>
           </tr>
 
@@ -322,7 +322,7 @@ export default function CashflowTable({
           {/* Subtotal Expenses */}
           <tr className="bg-red-50/50 dark:bg-red-900/10 font-semibold">
             <td className="sticky right-0 z-10 bg-red-50/50 dark:bg-red-900/10 px-3 py-1.5 text-sm border-b border-l">
-              סה״כ הוצאות
+              Total Expenses
             </td>
             {calculations.map((calc) => (
               <td key={calc.period} className="px-1 py-1.5 border-b border-l">
@@ -341,7 +341,7 @@ export default function CashflowTable({
                   colSpan={periods.length + 1}
                   className="px-3 py-1.5 text-sm font-bold text-orange-700 dark:text-orange-300 border-b"
                 >
-                  הוצאות נוספות
+                  Other Expenses
                 </td>
               </tr>
 
@@ -364,7 +364,7 @@ export default function CashflowTable({
               {/* Subtotal Other Expenses */}
               <tr className="bg-orange-50/50 dark:bg-orange-900/10 font-semibold">
                 <td className="sticky right-0 z-10 bg-orange-50/50 dark:bg-orange-900/10 px-3 py-1.5 text-sm border-b border-l">
-                  סה״כ הוצאות נוספות
+                  Total Other Expenses
                 </td>
                 {calculations.map((calc) => (
                   <td key={calc.period} className="px-1 py-1.5 border-b border-l">
@@ -380,7 +380,7 @@ export default function CashflowTable({
           {/* Total Cash Paid Out */}
           <tr className="bg-red-100/50 dark:bg-red-900/30 font-bold">
             <td className="sticky right-0 z-10 bg-red-100/50 dark:bg-red-900/30 px-3 py-1.5 text-sm border-b border-l">
-              סה״כ תשלומים
+              Total Cash Paid Out
             </td>
             {calculations.map((calc) => (
               <td key={calc.period} className="px-1 py-1.5 border-b border-l">
@@ -394,7 +394,7 @@ export default function CashflowTable({
           {/* Closing Balance */}
           <tr className="bg-blue-100 dark:bg-blue-900/30">
             <td className="sticky right-0 z-10 bg-blue-100 dark:bg-blue-900/30 px-3 py-2 text-sm font-bold border-b border-l">
-              יתרת סגירה
+              Closing Balance
             </td>
             {calculations.map((calc) => (
               <td key={calc.period} className="px-1 py-2 border-b border-l">

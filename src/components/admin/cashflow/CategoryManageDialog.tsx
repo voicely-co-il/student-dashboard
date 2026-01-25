@@ -30,9 +30,9 @@ interface CategoryManageDialogProps {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  income: "הכנסות",
-  expense: "הוצאות",
-  other_expense: "הוצאות נוספות",
+  income: "Income",
+  expense: "Expenses",
+  other_expense: "Other Expenses",
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -78,16 +78,16 @@ export default function CategoryManageDialog({ categories, children }: CategoryM
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto" dir="rtl">
+      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>ניהול קטגוריות</DialogTitle>
+          <DialogTitle>Manage Categories</DialogTitle>
         </DialogHeader>
 
         {/* Add new category */}
         <div className="flex gap-2 items-end border-b pb-4 mb-4">
           <div className="flex-1">
             <Input
-              placeholder="שם קטגוריה חדשה..."
+              placeholder="New category name..."
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
@@ -98,9 +98,9 @@ export default function CategoryManageDialog({ categories, children }: CategoryM
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="income">הכנסות</SelectItem>
-              <SelectItem value="expense">הוצאות</SelectItem>
-              <SelectItem value="other_expense">הוצאות נוספות</SelectItem>
+              <SelectItem value="income">Income</SelectItem>
+              <SelectItem value="expense">Expenses</SelectItem>
+              <SelectItem value="other_expense">Other Expenses</SelectItem>
             </SelectContent>
           </Select>
           <Button size="sm" onClick={handleAdd} disabled={!newName.trim()}>
@@ -146,7 +146,7 @@ export default function CategoryManageDialog({ categories, children }: CategoryM
                     >
                       {cat.name}
                       {cat.is_default && (
-                        <span className="text-xs text-muted-foreground mr-1">(ברירת מחדל)</span>
+                        <span className="text-xs text-muted-foreground ml-1">(default)</span>
                       )}
                     </span>
                   )}
@@ -167,7 +167,7 @@ export default function CategoryManageDialog({ categories, children }: CategoryM
         ))}
 
         <p className="text-xs text-muted-foreground mt-2">
-          לחצו פעמיים על שם קטגוריה כדי לשנות אותו. קטגוריות ברירת מחדל ניתנות לשינוי שם אך לא למחיקה.
+          Double-click a category name to rename it. Default categories can be renamed but not deleted.
         </p>
       </DialogContent>
     </Dialog>

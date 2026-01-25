@@ -15,6 +15,7 @@ import {
   Wallet,
   LayoutGrid,
   ChevronDown,
+  FlaskConical,
 } from 'lucide-react';
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }>; description?: string };
@@ -47,6 +48,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: 'כלים',
     items: [
+      { href: '/admin/ai-lab', label: 'מעבדה', icon: FlaskConical, description: 'AI Lab - ניסויים וכלים חדשים' },
       { href: '/admin/memory', label: 'זיכרון', icon: Brain, description: 'ניהול זיכרון AI' },
       { href: '/admin/names', label: 'שמות', icon: Tags, description: 'מיפוי שמות תלמידים' },
     ],

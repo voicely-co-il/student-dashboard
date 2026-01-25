@@ -287,6 +287,91 @@ const response = await fetch(`https://api.notion.com/v1/databases/${NOTION_CRM_D
 
 ---
 
+## Code Quality Standards (Claude Code Best Practices 2025)
+
+> Based on: [Anthropic Engineering Blog](https://www.anthropic.com/engineering/claude-code-best-practices), [Claude CLAUDE.md Guide](https://claude.com/blog/using-claude-md-files)
+
+### Context-Aware CLAUDE.md Structure
+**Claude טוען אוטומטית CLAUDE.md לפי תיקייה - השתמש בזה:**
+```
+CLAUDE.md                           ← Root (תמיד נטען)
+src/hooks/CLAUDE.md                 ← Hooks-specific patterns
+src/components/CLAUDE.md            ← Component conventions
+supabase/functions/CLAUDE.md        ← Edge Functions docs
+```
+
+### CLAUDE.md Size Limits
+| מדד | מומלץ | אזהרה |
+|-----|-------|-------|
+| Root CLAUDE.md | < 10,000 מילים | > 40,000 מילים |
+| Sub-directory CLAUDE.md | < 2,000 מילים | > 5,000 מילים |
+
+### File Size Limits (MANDATORY)
+**קבצים קטנים = Claude עובד טוב יותר:**
+
+| סוג קובץ | מקסימום שורות | למה? |
+|----------|---------------|------|
+| React Component | 200 | Claude קורא את כל הקובץ לקונטקסט |
+| Custom Hook | 150 | קל להבין ולתחזק |
+| Edge Function | 300 | Deno limits + קריאות |
+| Utility File | 100 | פונקציות ממוקדות |
+| Page Component | 150 | לוגיקה צריכה להיות ב-hooks |
+
+### Why Small Files Matter for Claude
+1. **Context Window** - קבצים גדולים = פחות מקום לקונטקסט אחר
+2. **Accuracy** - קבצים קטנים = פחות טעויות בעריכה
+3. **Speed** - Claude מעבד מהר יותר קבצים ממוקדים
+4. **Navigation** - קל יותר לנווט עם @references
+
+### When to Refactor (MUST)
+**חובה לפצל קובץ כאשר:**
+1. קובץ עובר את מגבלת השורות
+2. יש יותר מ-3 פונקציות ציבוריות
+3. Claude שואל שאלות על אותו קובץ שוב ושוב
+4. יש קוד כפול
+
+### Recommended File Structure
+```
+# Edge Functions - מודולרי עם _shared
+supabase/functions/teacher-chat/
+├── index.ts          # Main handler (≤100 lines)
+├── _shared/
+│   ├── intents.ts    # Intent classification
+│   ├── crm.ts        # CRM operations
+│   ├── calendar.ts   # Calendar operations
+│   ├── transcripts.ts # Transcript search
+│   └── streaming.ts  # SSE streaming
+└── CLAUDE.md         # Function-specific docs
+
+# Hooks - מפוצל לפי אחריות
+src/hooks/chat/
+├── useTeacherChat.ts   # Main export (≤100 lines)
+├── useSession.ts       # Session management
+├── useMessages.ts      # Message handling
+└── useStreaming.ts     # Streaming logic
+```
+
+### Import Pattern for Deno Edge Functions
+```typescript
+// Use relative imports with .ts extension
+import { classifyIntent } from "./_shared/intents.ts";
+import { searchTranscripts } from "./_shared/transcripts.ts";
+```
+
+### Current Technical Debt (URGENT)
+**קבצים שדורשים רפקטורינג:**
+- [ ] `supabase/functions/teacher-chat/index.ts` - **1,176 שורות** (מקסימום 300!)
+- [ ] `src/hooks/useTeacherChat.ts` - **506 שורות** (מקסימום 150!)
+
+### Code Review Checklist
+לפני כל commit:
+- [ ] אין קובץ שעבר את מגבלת השורות
+- [ ] כל פונקציה עושה דבר אחד בלבד
+- [ ] Error handling + timeouts בכל async operation
+- [ ] אין console.log מיותרים ב-production
+
+---
+
 ## Troubleshooting Log
 
 ### Supabase Auth - Infinite Loading / getSession() Hangs (Jan 2026)

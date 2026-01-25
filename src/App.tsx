@@ -27,8 +27,12 @@ import AdminMarketing from "./pages/admin/AdminMarketing";
 import AdminCashflow from "./pages/admin/AdminCashflow";
 import AdminMemoryDebug from "./pages/admin/AdminMemoryDebug";
 import AdminNameResolution from "./pages/admin/AdminNameResolution";
+import AdminAILab from "./pages/admin/AdminAILab";
 import ShortLinkResolver from "./pages/ShortLinkResolver";
 import NotFound from "./pages/NotFound";
+
+// Groups Platform (Juniors)
+import GroupsRoutes from "./pages/groups";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient({
@@ -267,11 +271,26 @@ const App = () => (
                 </AdminProtectedRoute>
               }
             />
+            <Route
+              path="/admin/ai-lab"
+              element={
+                <AdminProtectedRoute>
+                  <AdminLayout>
+                    <AdminAILab />
+                  </AdminLayout>
+                </AdminProtectedRoute>
+              }
+            />
 
             {/* Legacy redirects for old routes */}
             <Route path="/teacher-chat" element={<Navigate to="/teacher/chat" replace />} />
             <Route path="/live-chat" element={<Navigate to="/admin/live-chat" replace />} />
             <Route path="/student/live" element={<Navigate to="/admin/live-chat" replace />} />
+
+            {/* ===================== */}
+            {/* GROUPS PLATFORM (Juniors) */}
+            {/* ===================== */}
+            <Route path="/groups/*" element={<GroupsRoutes />} />
 
             {/* ===================== */}
             {/* SHORT LINKS */}

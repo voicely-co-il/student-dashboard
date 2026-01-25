@@ -46,14 +46,14 @@ export default function CashflowSettingsDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[400px]" dir="rtl">
+      <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
-          <DialogTitle>הגדרות תזרים</DialogTitle>
+          <DialogTitle>Cashflow Settings</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label>יתרת פתיחה - שבועי (₪)</Label>
+            <Label>Opening Balance - Weekly (₪)</Label>
             <Input
               type="number"
               value={openingWeekly}
@@ -64,7 +64,7 @@ export default function CashflowSettingsDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>יתרת פתיחה - חודשי (₪)</Label>
+            <Label>Opening Balance - Monthly (₪)</Label>
             <Input
               type="number"
               value={openingMonthly}
@@ -75,7 +75,7 @@ export default function CashflowSettingsDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>סף התראה מינימלי (₪)</Label>
+            <Label>Alert Minimum Threshold (₪)</Label>
             <Input
               type="number"
               value={alertMin}
@@ -84,12 +84,12 @@ export default function CashflowSettingsDialog({
               className="text-left"
             />
             <p className="text-xs text-muted-foreground">
-              כשהיתרה יורדת מתחת לסף - הערך יוצג באדום
+              When balance drops below this threshold, it will show in red
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label>תאריך התחלה (שבועי)</Label>
+            <Label>Start Date (Weekly)</Label>
             <Input
               type="date"
               value={startDate}
@@ -98,12 +98,12 @@ export default function CashflowSettingsDialog({
               className="text-left"
             />
             <p className="text-xs text-muted-foreground">
-              התאריך ממנו מתחילים 13 השבועות
+              The date from which the 13 weeks start
             </p>
           </div>
 
           <Button onClick={handleSave} className="w-full">
-            שמור הגדרות
+            Save Settings
           </Button>
         </div>
       </DialogContent>

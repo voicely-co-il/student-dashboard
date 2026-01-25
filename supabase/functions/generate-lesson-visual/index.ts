@@ -17,6 +17,9 @@ interface GenerateRequest {
   student_name?: string;
   lesson_date?: string;
 
+  // Option 3: Direct prompt (from suggestions system)
+  direct_prompt?: string;
+
   // Settings
   style?: "cartoon" | "watercolor" | "realistic" | "minimalist";
   aspect_ratio?: "1:1" | "16:9" | "9:16";
@@ -276,6 +279,7 @@ Deno.serve(async (req) => {
       lesson_content,
       student_name,
       lesson_date,
+      direct_prompt,
       style = "cartoon",
       aspect_ratio = "1:1",
     } = body;
@@ -349,10 +353,29 @@ Deno.serve(async (req) => {
     }
 
     try {
-      // Step 1: Extract visual prompt from content
-      console.log("Extracting visual elements...");
-      const extracted = await extractVisualPrompt(content, OPENAI_API_KEY);
-      const { imagePrompt, keyMoments, mood, mainAchievement, cardType, studentName: extractedName } = extracted;
+      // Step 1: Extract visual prompt from content OR use direct prompt
+      let imagePrompt: string;
+      let keyMoments: string[] = [];
+      let mood = "inspired";
+      let mainAchievement = "";
+      let cardType = "HERO_WIN";
+      let extractedName = studentNameFinal;
+
+      if (direct_prompt) {
+        // Use the pre-generated prompt from suggestions system
+        console.log("Using direct prompt from suggestions...");
+        imagePrompt = direct_prompt;
+      } else {
+        // Extract visual prompt from content
+        console.log("Extracting visual elements...");
+        const extracted = await extractVisualPrompt(content, OPENAI_API_KEY);
+        imagePrompt = extracted.imagePrompt;
+        keyMoments = extracted.keyMoments;
+        mood = extracted.mood;
+        mainAchievement = extracted.mainAchievement;
+        cardType = extracted.cardType;
+        extractedName = extracted.studentName;
+      }
 
       // Use extracted student name if not provided
       if (!student_name && extractedName && extractedName !== "תלמיד/ה") {

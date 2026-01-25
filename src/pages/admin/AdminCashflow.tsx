@@ -105,7 +105,7 @@ export default function AdminCashflow() {
 
   if (isLoading && categories.length === 0) {
     return (
-      <div className="min-h-screen bg-background" dir="rtl">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-6 max-w-7xl">
           <Skeleton className="h-10 w-48 mb-4" />
           <Skeleton className="h-[600px] w-full" />
@@ -115,13 +115,13 @@ export default function AdminCashflow() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col" dir="rtl">
+    <div className="min-h-screen bg-background flex flex-col">
       <div className="container mx-auto px-4 py-6 max-w-7xl flex-1">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Wallet className="w-6 h-6 text-amber-500" />
-            <h1 className="text-2xl font-bold">תזרים מזומנים</h1>
+            <h1 className="text-2xl font-bold">Cashflow</h1>
             <Badge variant="outline" className="text-amber-600 border-amber-300">
               ₪{summaryValues.currentBalance.toLocaleString("he-IL")}
             </Badge>
@@ -130,13 +130,13 @@ export default function AdminCashflow() {
             <CategoryManageDialog categories={categories}>
               <Button variant="outline" size="sm" className="gap-1.5">
                 <ListTree className="w-4 h-4" />
-                קטגוריות
+                Categories
               </Button>
             </CategoryManageDialog>
             <CashflowSettingsDialog settings={settings}>
               <Button variant="outline" size="sm" className="gap-1.5">
                 <Settings className="w-4 h-4" />
-                הגדרות
+                Settings
               </Button>
             </CashflowSettingsDialog>
           </div>
@@ -146,8 +146,8 @@ export default function AdminCashflow() {
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "weekly" | "monthly")}>
           <div className="flex items-center justify-between mb-4">
             <TabsList>
-              <TabsTrigger value="weekly">שבועי (13 שבועות)</TabsTrigger>
-              <TabsTrigger value="monthly">חודשי (12 חודשים)</TabsTrigger>
+              <TabsTrigger value="weekly">Weekly (13 weeks)</TabsTrigger>
+              <TabsTrigger value="monthly">Monthly (12 months)</TabsTrigger>
             </TabsList>
 
             {/* Period Navigation */}
@@ -161,7 +161,7 @@ export default function AdminCashflow() {
                     : setMonthlyOffset((o) => o - 1)
                 }
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronLeft className="w-4 h-4" />
               </Button>
               <Button
                 variant="ghost"
@@ -171,7 +171,7 @@ export default function AdminCashflow() {
                   else setMonthlyOffset(0);
                 }}
               >
-                היום
+                Today
               </Button>
               <Button
                 variant="ghost"
@@ -182,7 +182,7 @@ export default function AdminCashflow() {
                     : setMonthlyOffset((o) => o + 1)
                 }
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
           </div>

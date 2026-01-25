@@ -64,6 +64,37 @@ function extractLessonDate(title: string, modifiedTime: string): string {
   return modifiedTime.split("T")[0];
 }
 
+// Get access token using OAuth2 refresh token
+async function getAccessToken(): Promise<string> {
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID");
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
+  const refreshToken = Deno.env.get("GOOGLE_REFRESH_TOKEN");
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error("Missing Google OAuth credentials (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN)");
+  }
+
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  const tokenData = await tokenResponse.json();
+
+  if (!tokenData.access_token) {
+    console.error("Token response:", tokenData);
+    throw new Error("Failed to get Google access token");
+  }
+
+  return tokenData.access_token;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -74,28 +105,9 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get Google credentials from secrets
-    const googleCredentials = Deno.env.get("GOOGLE_SERVICE_ACCOUNT");
-    if (!googleCredentials) {
-      throw new Error("Missing GOOGLE_SERVICE_ACCOUNT secret");
-    }
-
-    const credentials = JSON.parse(googleCredentials);
-
-    // Get access token using service account
-    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        assertion: await createJWT(credentials),
-      }),
-    });
-
-    const { access_token } = await tokenResponse.json();
-    if (!access_token) {
-      throw new Error("Failed to get Google access token");
-    }
+    // Get access token using OAuth2 refresh token
+    const access_token = await getAccessToken();
+    console.log("Successfully obtained Google access token");
 
     // List files from Google Drive folder
     const listUrl = new URL("https://www.googleapis.com/drive/v3/files");
@@ -218,46 +230,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-// Create JWT for Google service account auth
-async function createJWT(credentials: { client_email: string; private_key: string }): Promise<string> {
-  const header = { alg: "RS256", typ: "JWT" };
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: credentials.client_email,
-    scope: "https://www.googleapis.com/auth/drive.readonly",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  };
-
-  const encoder = new TextEncoder();
-  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-  const payloadB64 = btoa(JSON.stringify(payload)).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-
-  const signatureInput = encoder.encode(`${headerB64}.${payloadB64}`);
-
-  // Import private key
-  const pemContents = credentials.private_key
-    .replace("-----BEGIN PRIVATE KEY-----", "")
-    .replace("-----END PRIVATE KEY-----", "")
-    .replace(/\s/g, "");
-
-  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  const signature = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, signatureInput);
-  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-
-  return `${headerB64}.${payloadB64}.${signatureB64}`;
-}

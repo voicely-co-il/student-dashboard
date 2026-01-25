@@ -20,8 +20,24 @@ serve(async (req) => {
 
     // Handle Notion webhook verification
     if (body.verification_token) {
-      console.log("Webhook verification request received");
-      return new Response(JSON.stringify({ challenge: body.verification_token }), {
+      const token = body.verification_token;
+      console.log("===========================================");
+      console.log("NOTION WEBHOOK VERIFICATION TOKEN:");
+      console.log(token);
+      console.log("===========================================");
+
+      // Store the token in the database for easy retrieval
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      await supabase.from("cashflow_settings").upsert(
+        { setting_key: "notion_webhook_token", setting_value: token },
+        { onConflict: "setting_key" }
+      );
+
+      return new Response(JSON.stringify({ success: true, message: "Token received and stored" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

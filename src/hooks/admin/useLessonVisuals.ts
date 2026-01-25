@@ -158,3 +158,158 @@ export function useDeleteVisual() {
     },
   });
 }
+
+// ============================================
+// Smart Suggestions - Creative Marketing Prompts
+// ============================================
+
+export interface VisualSuggestion {
+  title_he: string;
+  hook_he: string;
+  angle: "TRANSFORMATION" | "VICTORY" | "EMOTION" | "TECHNIQUE" | "COMMUNITY";
+  image_prompt: string;
+  caption_he: string;
+  hashtags: string[];
+  score: number;
+  why_viral: string;
+}
+
+export interface TranscriptSuggestion {
+  transcript_id: string;
+  student_name: string;
+  lesson_date: string;
+  content_preview: string;
+  suggestions: VisualSuggestion[];
+  lesson_type: string;
+  key_achievement: string;
+}
+
+interface SuggestionsParams {
+  days?: number;
+  limit?: number;
+  transcript_id?: string;
+  surprise_me?: boolean;
+}
+
+// Fetch smart suggestions from recent lessons
+export function useLessonSuggestions(params?: SuggestionsParams) {
+  return useQuery({
+    queryKey: ["lesson-visual-suggestions", params],
+    queryFn: async () => {
+      const response = await supabase.functions.invoke("suggest-lesson-visuals", {
+        body: params || { days: 7, limit: 5 },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to fetch suggestions");
+      }
+
+      return response.data as {
+        success: boolean;
+        count: number;
+        suggestions: TranscriptSuggestion[];
+      };
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
+// Generate a visual from a specific suggestion
+export function useGenerateFromSuggestion() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      transcript_id,
+      suggestion,
+      student_name,
+      lesson_date,
+      style = "cartoon",
+    }: {
+      transcript_id: string;
+      suggestion: VisualSuggestion;
+      student_name: string;
+      lesson_date: string;
+      style?: "cartoon" | "watercolor" | "realistic" | "minimalist";
+    }) => {
+      const response = await supabase.functions.invoke("generate-lesson-visual", {
+        body: {
+          transcript_id,
+          lesson_content: `[Creative Prompt]\nTitle: ${suggestion.title_he}\nHook: ${suggestion.hook_he}\nKey Achievement: ${suggestion.why_viral}\n\n[Pre-generated Prompt - Use directly]\n${suggestion.image_prompt}`,
+          student_name,
+          lesson_date,
+          style,
+          // Pass the pre-generated prompt directly
+          direct_prompt: suggestion.image_prompt,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to generate visual");
+      }
+
+      return {
+        ...response.data,
+        caption_he: suggestion.caption_he,
+        hashtags: suggestion.hashtags,
+      };
+    },
+    onSuccess: (data) => {
+      toast.success("🎨 התמונה נוצרה בהצלחה!", {
+        description: `${data.student_name || "תלמיד"} - מוכנה לשיתוף!`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["lesson-visuals"] });
+      queryClient.invalidateQueries({ queryKey: ["lesson-visual-suggestions"] });
+    },
+    onError: (error: Error) => {
+      toast.error("שגיאה ביצירת התמונה", {
+        description: error.message,
+      });
+    },
+  });
+}
+
+// "Surprise Me" - Random creative suggestion
+export function useSurpriseMe() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await supabase.functions.invoke("suggest-lesson-visuals", {
+        body: { days: 14, limit: 1, surprise_me: true },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Failed to get surprise");
+      }
+
+      const data = response.data as {
+        suggestions: TranscriptSuggestion[];
+      };
+
+      if (!data.suggestions || data.suggestions.length === 0) {
+        throw new Error("לא נמצאו שיעורים אחרונים להפתעה");
+      }
+
+      // Get the top suggestion from the random transcript
+      const randomTranscript = data.suggestions[0];
+      const topSuggestion = randomTranscript.suggestions[0];
+
+      return {
+        transcript: randomTranscript,
+        suggestion: topSuggestion,
+      };
+    },
+    onSuccess: () => {
+      toast.success("🎲 נמצאה הפתעה!", {
+        description: "בחרתי רגע מיוחד משיעור אחרון",
+      });
+    },
+    onError: (error: Error) => {
+      toast.error("לא הצלחתי למצוא הפתעה", {
+        description: error.message,
+      });
+    },
+  });
+}
