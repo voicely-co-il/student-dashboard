@@ -16,6 +16,10 @@ import {
   LayoutGrid,
   ChevronDown,
   FlaskConical,
+  UsersRound,
+  ClipboardList,
+  Trophy,
+  Mic2,
 } from 'lucide-react';
 
 type NavItem = { href: string; label: string; icon: React.ComponentType<{ className?: string }>; description?: string };
@@ -26,6 +30,15 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { href: '/student', label: 'תלמיד', icon: GraduationCap, description: 'דשבורד תלמיד' },
       { href: '/teacher', label: 'מורה', icon: Users, description: 'דשבורד מורה' },
+    ],
+  },
+  {
+    label: 'קבוצות (בטא)',
+    items: [
+      { href: '/groups/student?demo=true', label: 'דשבורד תלמידה', icon: UsersRound, description: 'עדי - דמו' },
+      { href: '/groups/teacher', label: 'דשבורד מורה', icon: ClipboardList, description: 'ניהול קבוצה' },
+      { href: '/groups/student/practice', label: 'תרגול', icon: Mic2, description: 'תרגילי קול' },
+      { href: '/groups/student/challenges', label: 'אתגרים', icon: Trophy, description: 'אתגרים שבועיים' },
     ],
   },
   {
