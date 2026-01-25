@@ -32,7 +32,7 @@ export default function NextLessonCard({
 
   return (
     <Card className={cn(
-      'overflow-hidden',
+      'overflow-hidden bg-white',
       isSoon && 'ring-2 ring-purple-500 ring-offset-2',
       className
     )}>

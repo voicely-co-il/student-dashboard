@@ -56,7 +56,9 @@ export default function StudentLayout({
       {/* Main Content */}
       <main
         className={cn(
-          'pb-20 pt-16 px-4 max-w-lg mx-auto',
+          'pb-20 pt-16 px-4 mx-auto',
+          // Responsive width: mobile narrow, desktop wider
+          'max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl',
           className
         )}
       >

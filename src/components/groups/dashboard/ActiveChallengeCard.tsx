@@ -39,7 +39,7 @@ export default function ActiveChallengeCard({
 
   return (
     <Card className={cn(
-      'overflow-hidden',
+      'overflow-hidden bg-white',
       isEnding && 'ring-2 ring-orange-400 ring-offset-2',
       className
     )}>
@@ -157,13 +157,13 @@ export default function ActiveChallengeCard({
 
 export function NoChallengeCard({ className }: { className?: string }) {
   return (
-    <Card className={cn('', className)}>
+    <Card className={cn('bg-white', className)}>
       <CardContent className="p-6 text-center">
         <span className="text-4xl">🎯</span>
         <h3 className="font-semibold text-gray-900 mt-2">
           אין אתגר פעיל כרגע
         </h3>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-gray-600 mt-1">
           האתגר הבא יתחיל בקרוב!
         </p>
       </CardContent>

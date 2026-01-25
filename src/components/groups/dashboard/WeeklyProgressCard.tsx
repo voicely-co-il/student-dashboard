@@ -84,9 +84,9 @@ export default function WeeklyProgressCard({
     : 0;
 
   return (
-    <Card className={cn('', className)}>
+    <Card className={cn('bg-white', className)}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold flex items-center gap-2">
+        <CardTitle className="text-base font-semibold text-gray-900 flex items-center gap-2">
           <span className="text-lg">📊</span>
           ההתקדמות שלך השבוע
         </CardTitle>
@@ -125,13 +125,13 @@ export default function WeeklyProgressCard({
 function MetricItem({ labelHe, value, previousValue, icon: Icon, color }: Metric) {
   const trend = previousValue !== undefined ? value - previousValue : 0;
   const TrendIcon = trend > 0 ? TrendingUp : trend < 0 ? TrendingDown : Minus;
-  const trendColor = trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-500' : 'text-gray-400';
+  const trendColor = trend > 0 ? 'text-green-600' : trend < 0 ? 'text-red-500' : 'text-gray-400';
 
   return (
-    <div className="bg-gray-50 rounded-lg p-3">
+    <div className="bg-gray-100 rounded-lg p-3 border border-gray-200">
       <div className="flex items-center gap-2 mb-1">
         <Icon className={cn('h-4 w-4', color)} />
-        <span className="text-xs text-gray-600">{labelHe}</span>
+        <span className="text-xs text-gray-700 font-medium">{labelHe}</span>
       </div>
 
       <div className="flex items-end justify-between">
@@ -140,7 +140,7 @@ function MetricItem({ labelHe, value, previousValue, icon: Icon, color }: Metric
         </span>
 
         {previousValue !== undefined && (
-          <div className={cn('flex items-center gap-0.5 text-xs', trendColor)}>
+          <div className={cn('flex items-center gap-0.5 text-xs font-medium', trendColor)}>
             <TrendIcon className="h-3 w-3" />
             <span>{Math.abs(trend)}%</span>
           </div>
@@ -148,7 +148,7 @@ function MetricItem({ labelHe, value, previousValue, icon: Icon, color }: Metric
       </div>
 
       {/* Mini progress bar */}
-      <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+      <div className="mt-2 h-1.5 bg-gray-300 rounded-full overflow-hidden">
         <div
           className={cn('h-full rounded-full transition-all duration-500', getProgressColor(value))}
           style={{ width: `${value}%` }}
