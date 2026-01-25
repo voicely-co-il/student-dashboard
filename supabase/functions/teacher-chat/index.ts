@@ -515,13 +515,43 @@ async function searchTranscripts(
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   // Extract keywords from query (remove common Hebrew stop words - must be whole words)
-  const stopWords = ["חפש", "בתמלולים", "תמלולים", "את", "של", "על", "עם", "מה", "איך", "למה", "מי", "מתי", "איפה"];
+  const stopWords = ["חפש", "בתמלולים", "תמלולים", "התמלולים", "את", "של", "על", "עם", "מה", "איך", "למה", "מי", "מתי", "איפה", "בדוק", "הראה", "תראה", "כל", "הכל", "לי", "לנו", "אותם", "אותן"];
   const keywords = query
     .split(/\s+/)
     .filter((w) => w.length > 1 && !stopWords.includes(w))
     .map((w) => w.trim())
     .filter((w) => w.length > 0);
   console.log(`[searchTranscripts] Extracted keywords:`, keywords);
+
+  // If no meaningful keywords extracted, return recent transcripts instead of failing
+  if (keywords.length === 0) {
+    console.log(`[searchTranscripts] No keywords found, returning recent transcripts`);
+    try {
+      const { data: recentResults, error: recentError } = await supabase
+        .from("transcript_chunks")
+        .select("id, transcript_id, student_name, content, lesson_date")
+        .order("lesson_date", { ascending: false, nullsFirst: false })
+        .limit(limit);
+
+      if (recentError) {
+        console.error(`[searchTranscripts] Recent transcripts error:`, JSON.stringify(recentError));
+        return [];
+      }
+
+      console.log(`[searchTranscripts] Returning ${recentResults?.length || 0} recent transcripts`);
+      return (recentResults || []).map((r: any) => ({
+        chunk_id: r.id,
+        transcript_id: r.transcript_id,
+        student_name: r.student_name,
+        content: r.content,
+        lesson_date: r.lesson_date,
+        similarity: 1.0,
+      }));
+    } catch (e) {
+      console.error(`[searchTranscripts] Recent transcripts exception:`, e);
+      return [];
+    }
+  }
 
   // First try text search for exact matches using Supabase client
   if (keywords.length > 0) {

@@ -52,15 +52,15 @@ CREATE POLICY "Admins can manage lesson visuals"
     )
   );
 
--- Teachers can view all
-CREATE POLICY "Teachers can view lesson visuals"
+-- Instructors/Teachers can view all
+CREATE POLICY "Instructors can view lesson visuals"
   ON lesson_visuals FOR SELECT
   TO authenticated
   USING (
     EXISTS (
       SELECT 1 FROM user_roles
       WHERE user_id = auth.uid()
-      AND role IN ('admin', 'teacher')
+      AND role IN ('admin', 'instructor')
     )
   );
 

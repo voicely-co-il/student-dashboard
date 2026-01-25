@@ -22,30 +22,70 @@ interface GenerateRequest {
   aspect_ratio?: "1:1" | "16:9" | "9:16";
 }
 
-// System prompt for extracting visual elements from lesson content
-const VISUAL_EXTRACTION_PROMPT = `אתה מומחה ביצירת תיאורים ויזואליים לשיעורי קול ושירה.
+// Voicely Image Prompt System - optimized for Gemini Imagen
+// Based on Timeless prompt system + Gemini best practices
 
-תפקידך: לקרוא תמלול של שיעור ולחלץ 2-3 נקודות מפתח ויזואליות שאפשר להמחיש בתמונה.
+const VISUAL_EXTRACTION_PROMPT = `You are the Voicely Image Prompt Agent, creating celebration images for vocal lesson students.
 
-כללים:
-1. התמקד ברגעי למידה חיוביים ומעודדים
-2. חשוב על אלמנטים שקשורים לקול, שירה, נשימה, תנועה
-3. השתמש בתיאורים קונקרטיים וויזואליים
-4. הימנע מטקסט או מילים בתמונה
+GOAL: From each lesson transcript, create a WOW marketing image prompt:
+- Celebration, victory, emotion, atmosphere
+- Student-centered, safe, non-stocky
+- Musical visual elements (sound waves, notes, motion)
 
-פורמט התשובה - JSON בלבד:
+EXTRACT FROM LESSON:
+• Student name(s) and approximate age
+• Type: first lesson / breakthrough / milestone / steady progress / group
+• Main achievement and emotional tone
+• Key technique practiced
+
+VISUAL STYLE BASELINE (Gemini-optimized):
+- High quality, 4K cinematic image
+- Bright, clear lighting, shallow depth of field
+- Musical icons, sound waves, sparkles, motion
+- Student singing/practicing with big positive emotion
+- Colors: vibrant teal (#00C6AE) and coral (#FF6F61) accents
+
+PROMPT STRUCTURE (follow exactly):
+[Subject + age + emotion] [Action/pose] in [Location]. [Composition/camera]. [Lighting]. [Style].
+
+CARD TYPES (pick the most relevant):
+1. HERO_WIN - celebrate main achievement, fireworks vibe
+2. TECHNIQUE_FOCUS - highlight vocal technique (breathing, posture, projection)
+3. EMOTION_STORY - before/after emotional shift
+4. MOTIVATION - atmospheric, inspirational mood
+
+OUTPUT FORMAT - JSON only:
 {
-  "key_moments": ["רגע 1", "רגע 2"],
-  "visual_elements": ["אלמנט 1", "אלמנט 2", "אלמנט 3"],
-  "mood": "מילה אחת שמתארת את האווירה",
-  "image_prompt": "תיאור מפורט לתמונה באנגלית, 2-3 משפטים"
-}`;
+  "student_name": "extracted name or 'תלמיד/ה'",
+  "student_age": "teen/child/adult if detectable",
+  "card_type": "HERO_WIN|TECHNIQUE_FOCUS|EMOTION_STORY|MOTIVATION",
+  "main_achievement": "1 sentence in Hebrew",
+  "key_moments": ["moment 1", "moment 2"],
+  "mood": "one word: triumphant/confident/joyful/focused/inspired",
+  "image_prompt": "Full prompt in English, 2-3 sentences following the structure above. Be descriptive not repetitive."
+}
+
+IMPORTANT GEMINI RULES:
+- No text/words in the image (Gemini can add text but we want clean images)
+- Use photographic language: wide-angle shot, 85mm portrait, soft bokeh
+- Keep character consistent: describe specific features
+- Be specific about lighting: golden hour, studio lights, dramatic backlight`;
+
+interface ExtractedVisual {
+  studentName: string;
+  studentAge: string;
+  cardType: string;
+  mainAchievement: string;
+  keyMoments: string[];
+  mood: string;
+  imagePrompt: string;
+}
 
 // Generate image prompt from lesson content
 async function extractVisualPrompt(
   lessonContent: string,
   openaiKey: string
-): Promise<{ keyMoments: string[]; visualElements: string[]; mood: string; imagePrompt: string }> {
+): Promise<ExtractedVisual> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -56,7 +96,7 @@ async function extractVisualPrompt(
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: VISUAL_EXTRACTION_PROMPT },
-        { role: "user", content: `תמלול השיעור:\n\n${lessonContent.slice(0, 4000)}` },
+        { role: "user", content: `Lesson transcript:\n\n${lessonContent.slice(0, 4000)}` },
       ],
       response_format: { type: "json_object" },
       temperature: 0.7,
@@ -71,9 +111,12 @@ async function extractVisualPrompt(
   const result = JSON.parse(data.choices[0].message.content);
 
   return {
+    studentName: result.student_name || "תלמיד/ה",
+    studentAge: result.student_age || "teen",
+    cardType: result.card_type || "HERO_WIN",
+    mainAchievement: result.main_achievement || "",
     keyMoments: result.key_moments || [],
-    visualElements: result.visual_elements || [],
-    mood: result.mood || "inspiring",
+    mood: result.mood || "inspired",
     imagePrompt: result.image_prompt || "",
   };
 }
@@ -85,15 +128,16 @@ async function generateImageWithGemini(
   style: string,
   aspectRatio: string
 ): Promise<{ imageUrl: string; revisedPrompt?: string }> {
-  // Style modifiers
+  // Gemini-optimized style modifiers (following best practices)
   const styleModifiers: Record<string, string> = {
-    cartoon: "colorful cartoon illustration style, playful, vibrant colors",
-    watercolor: "soft watercolor painting style, gentle colors, artistic",
-    realistic: "photorealistic, high quality, detailed lighting",
-    minimalist: "clean minimalist illustration, simple shapes, modern design",
+    cartoon: "Vibrant colorful cartoon illustration. Bright teal and coral accents. Playful, celebratory mood. 85mm portrait lens perspective. Soft bokeh background.",
+    watercolor: "Soft watercolor painting style. Gentle pastel colors with teal and coral highlights. Dreamy, artistic atmosphere. Natural light filtering through.",
+    realistic: "Photorealistic high quality image. Professional studio lighting with dramatic backlight. Shallow depth of field. 4K cinematic look.",
+    minimalist: "Clean minimalist modern illustration. Simple geometric shapes. Bold teal (#00C6AE) and coral (#FF6F61) color palette. Lots of white space.",
   };
 
-  const fullPrompt = `${prompt}. Style: ${styleModifiers[style] || styleModifiers.cartoon}. No text or letters in the image.`;
+  // Gemini works best with natural language, no keyword spam
+  const fullPrompt = `${prompt} ${styleModifiers[style] || styleModifiers.cartoon} Important: No text, words, or letters anywhere in the image.`;
 
   // Gemini 2.5 Flash with image generation
   const response = await fetch(
@@ -210,16 +254,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin/teacher role
+    // Check admin/instructor role
     const { data: roleData } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .in("role", ["admin", "teacher"])
+      .in("role", ["admin", "instructor"])
       .limit(1);
 
     if (!roleData || roleData.length === 0) {
-      return new Response(JSON.stringify({ error: "Teacher or admin access required" }), {
+      return new Response(JSON.stringify({ error: "Instructor or admin access required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -307,12 +351,23 @@ Deno.serve(async (req) => {
     try {
       // Step 1: Extract visual prompt from content
       console.log("Extracting visual elements...");
-      const { imagePrompt, keyMoments, mood } = await extractVisualPrompt(content, OPENAI_API_KEY);
+      const extracted = await extractVisualPrompt(content, OPENAI_API_KEY);
+      const { imagePrompt, keyMoments, mood, mainAchievement, cardType, studentName: extractedName } = extracted;
 
-      // Update record with prompt
+      // Use extracted student name if not provided
+      if (!student_name && extractedName && extractedName !== "תלמיד/ה") {
+        studentNameFinal = extractedName;
+      }
+
+      // Update record with prompt and achievement
       await supabase
         .from("lesson_visuals")
-        .update({ prompt: imagePrompt, source_text: keyMoments.join("\n") })
+        .update({
+          prompt: imagePrompt,
+          source_text: `${mainAchievement}\n\n${keyMoments.join("\n")}`,
+          student_name: studentNameFinal,
+          settings: { style, aspect_ratio, card_type: cardType, mood },
+        })
         .eq("id", visual.id);
 
       // Step 2: Generate image with Gemini
@@ -346,7 +401,10 @@ Deno.serve(async (req) => {
           image_url: publicUrl,
           prompt: imagePrompt,
           mood,
+          card_type: cardType,
+          main_achievement: mainAchievement,
           key_moments: keyMoments,
+          student_name: studentNameFinal,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
