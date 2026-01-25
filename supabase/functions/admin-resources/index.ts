@@ -8,6 +8,35 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
 };
 
+// Supabase Management API base URL
+const MANAGEMENT_API_URL = "https://api.supabase.com/v1";
+const PROJECT_REF = "jldfxkbczzxawdqsznze";
+
+// Plan limits configuration
+const PLAN_LIMITS = {
+  free: {
+    database: 500 * 1024 * 1024, // 500 MB
+    storage: 1 * 1024 * 1024 * 1024, // 1 GB
+    edgeFunctions: 500_000, // 500K invocations
+    mau: 50_000, // 50K MAU
+    egress: 5 * 1024 * 1024 * 1024, // 5 GB
+  },
+  pro: {
+    database: 8 * 1024 * 1024 * 1024, // 8 GB
+    storage: 100 * 1024 * 1024 * 1024, // 100 GB
+    edgeFunctions: 2_000_000, // 2M invocations
+    mau: 100_000, // 100K MAU
+    egress: 250 * 1024 * 1024 * 1024, // 250 GB
+  },
+  team: {
+    database: 8 * 1024 * 1024 * 1024, // 8 GB base
+    storage: 100 * 1024 * 1024 * 1024, // 100 GB
+    edgeFunctions: 2_000_000, // 2M invocations
+    mau: 100_000, // 100K MAU
+    egress: 250 * 1024 * 1024 * 1024, // 250 GB
+  },
+};
+
 interface ResourceUsage {
   supabase: {
     plan: string;
@@ -64,22 +93,170 @@ interface ResourceUsage {
   };
 }
 
+// Fetch project info from Supabase Management API
+async function fetchProjectInfo(accessToken: string): Promise<{
+  plan: string;
+  status: string;
+  region: string;
+  organizationId: string;
+}> {
+  const response = await fetch(`${MANAGEMENT_API_URL}/projects/${PROJECT_REF}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    console.error("Failed to fetch project info:", response.status, await response.text());
+    return { plan: "Unknown", status: "Unknown", region: "Unknown", organizationId: "" };
+  }
+
+  const data = await response.json();
+  return {
+    plan: data.subscription_id || "Unknown",
+    status: data.status || "ACTIVE",
+    region: data.region || "Unknown",
+    organizationId: data.organization_id || "",
+  };
+}
+
+// Fetch organization subscription details
+async function fetchOrganizationSubscription(accessToken: string, orgId: string): Promise<{
+  plan: string;
+  billingEmail: string | null;
+}> {
+  if (!orgId) return { plan: "Unknown", billingEmail: null };
+
+  const response = await fetch(`${MANAGEMENT_API_URL}/organizations/${orgId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    console.error("Failed to fetch org info:", response.status);
+    return { plan: "Unknown", billingEmail: null };
+  }
+
+  const data = await response.json();
+  // The plan is directly in data.plan for organizations
+  console.log("Organization data:", JSON.stringify(data));
+  return {
+    plan: data.plan || data.billing?.plan || data.subscription_tier || "Unknown",
+    billingEmail: data.billing?.email || null,
+  };
+}
+
+// Fetch billing addons (compute size, etc.)
+async function fetchBillingAddons(accessToken: string): Promise<{
+  computeSize: string;
+  diskSize: number;
+}> {
+  const response = await fetch(`${MANAGEMENT_API_URL}/projects/${PROJECT_REF}/billing/addons`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    console.error("Failed to fetch billing addons:", response.status);
+    return { computeSize: "micro", diskSize: 8 * 1024 * 1024 * 1024 };
+  }
+
+  const data = await response.json();
+  // Parse addons to find compute and disk info
+  const computeAddon = data.selected_addons?.find((a: any) => a.type === "compute_instance");
+  const diskAddon = data.selected_addons?.find((a: any) => a.type === "disk_size");
+
+  return {
+    computeSize: computeAddon?.variant || "micro",
+    diskSize: diskAddon?.meta?.disk_size_gb
+      ? diskAddon.meta.disk_size_gb * 1024 * 1024 * 1024
+      : 8 * 1024 * 1024 * 1024, // Default 8GB
+  };
+}
+
 // Get Supabase project stats
 async function getSupabaseStats(supabase: any): Promise<ResourceUsage["supabase"]> {
-  // Get database size
+  const accessToken = Deno.env.get("SB_MANAGEMENT_TOKEN");
+
+  // Fetch real plan info from Management API if token is available
+  let planName = "Free";
+  let limits = PLAN_LIMITS.free;
+  let diskSizeLimit = PLAN_LIMITS.free.database;
+
+  if (accessToken) {
+    try {
+      const [projectInfo, billingAddons] = await Promise.all([
+        fetchProjectInfo(accessToken),
+        fetchBillingAddons(accessToken),
+      ]);
+
+      // Fetch org details if we have org ID
+      let orgPlan = "Unknown";
+      if (projectInfo.organizationId) {
+        const orgInfo = await fetchOrganizationSubscription(accessToken, projectInfo.organizationId);
+        orgPlan = orgInfo.plan;
+      }
+
+      // Determine plan from various sources
+      const detectedPlan = (orgPlan || projectInfo.plan || "").toLowerCase();
+
+      if (detectedPlan.includes("pro")) {
+        planName = "Pro";
+        limits = PLAN_LIMITS.pro;
+      } else if (detectedPlan.includes("team")) {
+        planName = "Team";
+        limits = PLAN_LIMITS.team;
+      } else if (detectedPlan.includes("enterprise")) {
+        planName = "Enterprise";
+        limits = PLAN_LIMITS.team; // Use team limits as base
+      } else if (detectedPlan.includes("free") || detectedPlan === "" || detectedPlan === "unknown") {
+        planName = "Free";
+        limits = PLAN_LIMITS.free;
+      } else {
+        // Assume Pro if we can't determine (paid plans often have custom names)
+        planName = orgPlan || projectInfo.plan || "Pro";
+        limits = PLAN_LIMITS.pro;
+      }
+
+      // Override disk limit if billing addon specifies it
+      if (billingAddons.diskSize > 0) {
+        diskSizeLimit = billingAddons.diskSize;
+      } else {
+        diskSizeLimit = limits.database;
+      }
+
+      console.log(`Detected plan: ${planName}, org plan: ${orgPlan}, disk limit: ${diskSizeLimit / (1024*1024*1024)}GB`);
+    } catch (error) {
+      console.error("Error fetching from Management API:", error);
+    }
+  } else {
+    console.warn("SB_MANAGEMENT_TOKEN not set, using default limits");
+  }
+
+  // Get database size from actual database
   const { data: dbSize } = await supabase.rpc("get_database_size").single();
 
-  // Get storage size
-  const { data: storageData } = await supabase
-    .from("storage.objects")
-    .select("metadata")
-    .limit(1000);
-
+  // Get storage size - query storage.objects properly
   let storageSizeBytes = 0;
-  if (storageData) {
-    storageSizeBytes = storageData.reduce((acc: number, obj: any) => {
-      return acc + (obj.metadata?.size || 0);
-    }, 0);
+  try {
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (buckets) {
+      for (const bucket of buckets) {
+        const { data: files } = await supabase.storage.from(bucket.name).list("", { limit: 1000 });
+        if (files) {
+          for (const file of files) {
+            storageSizeBytes += file.metadata?.size || 0;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error getting storage size:", e);
   }
 
   // Get monthly active users count (approximate)
@@ -101,38 +278,30 @@ async function getSupabaseStats(supabase: any): Promise<ResourceUsage["supabase"
   // Get table sizes breakdown
   const { data: tableSizes } = await supabase.rpc("get_table_sizes");
 
-  // Free tier limits
-  const FREE_TIER = {
-    database: 500 * 1024 * 1024, // 500 MB
-    storage: 1024 * 1024 * 1024, // 1 GB
-    edgeFunctions: 500000, // 500K invocations
-    mau: 50000, // 50K MAU
-  };
-
   const dbSizeBytes = dbSize?.size_bytes || 0;
 
   return {
-    plan: "Free Trial",
-    trialEndsAt: null, // Would need Management API
+    plan: planName,
+    trialEndsAt: null,
     database: {
       sizeUsed: dbSizeBytes,
-      sizeLimit: FREE_TIER.database,
-      percentUsed: Math.round((dbSizeBytes / FREE_TIER.database) * 100),
+      sizeLimit: diskSizeLimit,
+      percentUsed: Math.round((dbSizeBytes / diskSizeLimit) * 100),
     },
     storage: {
       sizeUsed: storageSizeBytes,
-      sizeLimit: FREE_TIER.storage,
-      percentUsed: Math.round((storageSizeBytes / FREE_TIER.storage) * 100),
+      sizeLimit: limits.storage,
+      percentUsed: Math.round((storageSizeBytes / limits.storage) * 100),
     },
     edgeFunctions: {
       invocations: edgeFnCount || 0,
-      limit: FREE_TIER.edgeFunctions,
-      percentUsed: Math.round(((edgeFnCount || 0) / FREE_TIER.edgeFunctions) * 100),
+      limit: limits.edgeFunctions,
+      percentUsed: Math.round(((edgeFnCount || 0) / limits.edgeFunctions) * 100),
     },
     auth: {
       monthlyActiveUsers: mauCount || 0,
-      limit: FREE_TIER.mau,
-      percentUsed: Math.round(((mauCount || 0) / FREE_TIER.mau) * 100),
+      limit: limits.mau,
+      percentUsed: Math.round(((mauCount || 0) / limits.mau) * 100),
     },
     tableSizes: tableSizes || [],
   };

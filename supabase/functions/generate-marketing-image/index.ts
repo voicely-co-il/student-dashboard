@@ -69,6 +69,7 @@ Deno.serve(async (req) => {
       .select("role")
       .eq("user_id", user.id)
       .eq("role", "admin")
+      .eq("is_active", true)
       .single();
 
     if (!roleData) {
@@ -168,7 +169,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             prompt: {
               text: enhancedPrompt,
-              negative_prompt,
+              // Note: negative_prompt not supported on Flux models
               super_resolution: true,
               face_correct: true,
               callback: null, // We'll poll for results

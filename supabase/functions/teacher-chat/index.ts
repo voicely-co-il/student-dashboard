@@ -493,16 +493,78 @@ function parseHebrewDateTime(
   };
 }
 
-// Search transcripts using vector similarity
+// Search transcripts using vector similarity with text fallback
 async function searchTranscripts(
-  supabase: any,
+  _supabase: any, // Keep param for compatibility but create fresh client
   query: string,
   limit = 5
 ): Promise<any[]> {
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+  console.log(`[searchTranscripts] Starting search for query: "${query}"`);
+  console.log(`[searchTranscripts] Supabase URL exists: ${!!supabaseUrl}, Service Key exists: ${!!supabaseServiceKey}`);
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error("[searchTranscripts] Missing Supabase credentials!");
+    return [];
+  }
+
+  // Create a fresh Supabase client to ensure proper connection
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Extract keywords from query (remove common Hebrew stop words - must be whole words)
+  const stopWords = ["חפש", "בתמלולים", "תמלולים", "את", "של", "על", "עם", "מה", "איך", "למה", "מי", "מתי", "איפה"];
+  const keywords = query
+    .split(/\s+/)
+    .filter((w) => w.length > 1 && !stopWords.includes(w))
+    .map((w) => w.trim())
+    .filter((w) => w.length > 0);
+  console.log(`[searchTranscripts] Extracted keywords:`, keywords);
+
+  // First try text search for exact matches using Supabase client
+  if (keywords.length > 0) {
+    for (const keyword of keywords) {
+      try {
+        console.log(`[searchTranscripts] Trying Supabase client text search for keyword: "${keyword}"`);
+
+        // Use Supabase client with ilike - note: column is student_name not student_id
+        const { data: textResults, error: textError } = await supabase
+          .from("transcript_chunks")
+          .select("id, transcript_id, student_name, content, lesson_date")
+          .ilike("content", `%${keyword}%`)
+          .order("lesson_date", { ascending: false, nullsFirst: false })
+          .limit(limit);
+
+        if (textError) {
+          console.error(`[searchTranscripts] Supabase client error:`, JSON.stringify(textError));
+          continue;
+        }
+
+        console.log(`[searchTranscripts] Supabase client result for "${keyword}": ${textResults?.length || 0} results`);
+
+        if (textResults && textResults.length > 0) {
+          console.log(`[searchTranscripts] Text search found ${textResults.length} results for "${keyword}"`);
+          return textResults.map((r: any) => ({
+            chunk_id: r.id,
+            transcript_id: r.transcript_id,
+            student_name: r.student_name,
+            content: r.content,
+            lesson_date: r.lesson_date,
+            similarity: 1.0, // exact match
+          }));
+        }
+      } catch (e) {
+        console.error(`[searchTranscripts] Text search exception for "${keyword}":`, e);
+      }
+    }
+  }
+  console.log(`[searchTranscripts] No text search results, falling back to semantic search`);
+
+  // Fall back to semantic search if no text matches
   if (!openaiKey) {
-    console.error("Missing OpenAI key");
+    console.error("Missing OpenAI key for semantic search");
     return [];
   }
 
@@ -527,13 +589,14 @@ async function searchTranscripts(
     const queryEmbedding = embeddingData.data?.[0]?.embedding;
 
     if (!queryEmbedding) {
+      console.error("Failed to generate embedding");
       return [];
     }
 
-    // Search using RPC
+    // Search using RPC with lower threshold for better recall
     const { data: results, error } = await supabase.rpc("search_transcripts", {
       query_embedding: queryEmbedding,
-      match_threshold: 0.7,
+      match_threshold: 0.4, // Lowered from 0.7 for better recall
       match_count: limit,
       filter_student_id: null,
     });
@@ -543,6 +606,7 @@ async function searchTranscripts(
       return [];
     }
 
+    console.log(`Semantic search found ${results?.length || 0} results for "${query}"`);
     return results || [];
   } catch (error) {
     console.error("Transcript search error:", error);
@@ -821,8 +885,13 @@ Deno.serve(async (req) => {
       }
 
       case "transcript_search": {
-        const query = intent.entities.search_query || message;
-        const results = await searchTranscripts(supabase, query, 5);
+        const searchQuery = intent.entities.search_query || message;
+        console.log(`[transcript_search] Full query: "${searchQuery}"`);
+        console.log(`[transcript_search] Entities: ${JSON.stringify(intent.entities)}`);
+
+        const results = await searchTranscripts(supabase, searchQuery, 5);
+        console.log(`[transcript_search] Results count: ${results.length}`);
+
         if (results.length > 0) {
           context = `נמצאו ${results.length} תוצאות רלוונטיות בתמלולים:\n${results
             .slice(0, 3)

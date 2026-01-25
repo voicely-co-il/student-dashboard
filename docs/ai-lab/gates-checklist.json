@@ -1,0 +1,345 @@
+{
+  "version": "1.0",
+  "description": "Voicely AI Lab - Gate Checklist for Experiment Progression",
+  "last_updated": "2026-01-25",
+  "gates": [
+    {
+      "id": "discovery_to_alpha",
+      "from": "discovery",
+      "to": "alpha",
+      "title": "Discovery → Alpha",
+      "title_he": "גילוי → אלפא",
+      "goal": "Prove technical feasibility + pedagogical potential without risking users",
+      "goal_he": "להוכיח היתכנות טכנית + פוטנציאל פדגוגי בלי לסכן משתמשים",
+      "required": [
+        {
+          "key": "poc_works",
+          "label": "POC works technically",
+          "label_he": "POC עובד טכנית (דמו/וידאו/הקלטה)",
+          "type": "evidence",
+          "evidence_types": ["attachment", "link", "note"],
+          "min_count": 1
+        },
+        {
+          "key": "owner_assigned",
+          "label": "Owner assigned and accountable",
+          "label_he": "Owner מוגדר ואחראי לתפעול",
+          "type": "field",
+          "field": "owner_user_id"
+        },
+        {
+          "key": "metrics_defined",
+          "label": "1-3 metrics defined with baseline + target",
+          "label_he": "מוגדרים עד 3 מדדים עם baseline + target",
+          "type": "rule",
+          "rule": "experiment_metrics.count >= 1 && experiment_metrics.count <= 3"
+        },
+        {
+          "key": "kill_criteria_defined",
+          "label": "Kill criteria written and clear",
+          "label_he": "Kill Criteria כתובים וברורים",
+          "type": "field",
+          "field": "kill_criteria"
+        },
+        {
+          "key": "privacy_impact_set",
+          "label": "Privacy impact defined + data sensitivity specified",
+          "label_he": "Privacy impact מוגדר + מה נאסף (data_sensitivity)",
+          "type": "field_combo",
+          "fields": ["privacy_impact", "data_sensitivity"]
+        },
+        {
+          "key": "flag_created",
+          "label": "Feature flag created (disabled by default)",
+          "label_he": "נוצר Feature Flag לניסוי (כבוי כברירת מחדל)",
+          "type": "rule",
+          "rule": "feature_flag.exists == true && feature_flag.active == false"
+        }
+      ],
+      "optional": [
+        {
+          "key": "cost_benefit_guess",
+          "label": "Rough cost/benefit estimate (one line)",
+          "label_he": "הערכה גסה של עלות/תועלת (שורה אחת)",
+          "type": "field_combo",
+          "fields": ["cost_estimate", "expected_benefit"]
+        }
+      ],
+      "blockers": [
+        {
+          "key": "collects_sensitive_without_plan",
+          "label": "Collects audio/video without consent/retention plan",
+          "label_he": "נאסף אודיו/וידאו בלי תכנית הסכמה/Retention",
+          "type": "rule",
+          "rule": "(privacy_impact in ['moderate','high']) && (consent_plan.exists != true)"
+        }
+      ]
+    },
+    {
+      "id": "alpha_to_private_beta",
+      "from": "alpha",
+      "to": "private_beta",
+      "title": "Alpha → Private Beta",
+      "title_he": "אלפא → בטא פרטית",
+      "goal": "Stability + teacher approval + no privacy risks",
+      "goal_he": "יציבות + אישור מורה + בלי סיכוני פרטיות",
+      "required": [
+        {
+          "key": "teacher_satisfaction_70",
+          "label": ">=70% teacher satisfaction in trial",
+          "label_he": "≥70% שביעות רצון מהמורה/ות בניסוי",
+          "type": "metric_threshold",
+          "metric": "teacher_satisfaction",
+          "operator": ">=",
+          "value": 70
+        },
+        {
+          "key": "no_critical_bugs_7_days",
+          "label": "0 critical bugs for 7 consecutive days",
+          "label_he": "0 באגים קריטיים במשך 7 ימים רצופים",
+          "type": "rule",
+          "rule": "critical_bugs.last_7_days == 0"
+        },
+        {
+          "key": "consent_form_ready",
+          "label": "Consent form ready (active version) for target audience",
+          "label_he": "טופס הסכמה מוכן (גרסה פעילה) לפי קהל היעד",
+          "type": "rule",
+          "rule": "consent_form.active == true"
+        },
+        {
+          "key": "instructions_ready",
+          "label": "Short user guide (one page) ready",
+          "label_he": "מדריך שימוש קצר (עמוד אחד) מוכן",
+          "type": "evidence",
+          "evidence_types": ["attachment", "link"],
+          "min_count": 1
+        },
+        {
+          "key": "kill_switch_verified",
+          "label": "Kill switch tested and working",
+          "label_he": "Kill switch/כיבוי מיידי נבדק ועובד",
+          "type": "checkbox"
+        }
+      ],
+      "optional": [
+        {
+          "key": "ab_plan",
+          "label": "A/B or group benchmark plan",
+          "label_he": "תכנית A/B או Benchmark קבוצתי",
+          "type": "note"
+        }
+      ],
+      "blockers": [
+        {
+          "key": "privacy_incident_any",
+          "label": "Open/unresolved privacy incident",
+          "label_he": "אירוע פרטיות פתוח/לא פתור",
+          "type": "rule",
+          "rule": "privacy_incidents.open_count > 0"
+        }
+      ]
+    },
+    {
+      "id": "private_beta_to_public_beta",
+      "from": "private_beta",
+      "to": "public_beta",
+      "title": "Private Beta → Public Beta",
+      "title_he": "בטא פרטית → בטא ציבורית",
+      "goal": "Demonstrate value to users + proper consent process + metrics moving",
+      "goal_he": "להראות ערך למשתמשים + תהליך הסכמות תקין + מדדים מתחילים לזוז",
+      "required": [
+        {
+          "key": "task_completion_70",
+          "label": ">=70% task/practice completion (primary metric)",
+          "label_he": "≥70% השלמת משימות/תרגול (לפי מדד Primary)",
+          "type": "metric_threshold",
+          "metric": "task_completion",
+          "operator": ">=",
+          "value": 70
+        },
+        {
+          "key": "nps_7",
+          "label": "NPS >= 7",
+          "label_he": "NPS ≥ 7",
+          "type": "metric_threshold",
+          "metric": "nps",
+          "operator": ">=",
+          "value": 7
+        },
+        {
+          "key": "consents_ok",
+          "label": "100% valid consents for participants (including parent consent for minors)",
+          "label_he": "100% הסכמות תקינות למשתתפים (כולל הורים לקטינים)",
+          "type": "rule",
+          "rule": "participants.where(consent_status != 'approved').count == 0"
+        },
+        {
+          "key": "support_playbook",
+          "label": "Support/incident playbook ready (who handles, SLA, process)",
+          "label_he": "Playbook לתמיכה/תקלות מוכן (מי מטפל, SLA, תהליך)",
+          "type": "evidence",
+          "evidence_types": ["attachment", "link", "note"],
+          "min_count": 1
+        }
+      ],
+      "optional": [
+        {
+          "key": "rollout_plan",
+          "label": "Gradual rollout plan (10%→30%→50%)",
+          "label_he": "תכנית רול-אאוט מדורג (10%→30%→50%)",
+          "type": "note"
+        }
+      ],
+      "blockers": [
+        {
+          "key": "opt_out_missing",
+          "label": "No clear opt-out/disable option for user",
+          "label_he": "אין דרך ברורה Opt-out / כיבוי למשתמש",
+          "type": "checkbox_false_blocker"
+        }
+      ]
+    },
+    {
+      "id": "public_beta_to_ga",
+      "from": "public_beta",
+      "to": "ga",
+      "title": "Public Beta → GA",
+      "title_he": "בטא ציבורית → GA",
+      "goal": "Stable value, ROI, documentation, and risk management",
+      "goal_he": "ערך יציב, ROI, תיעוד, וניהול סיכונים",
+      "required": [
+        {
+          "key": "satisfaction_80",
+          "label": ">=80% satisfaction (teachers/students per feature type)",
+          "label_he": "≥80% שביעות רצון (מורים/תלמידים לפי סוג הפיצ'ר)",
+          "type": "metric_threshold",
+          "metric": "satisfaction",
+          "operator": ">=",
+          "value": 80
+        },
+        {
+          "key": "roi_positive",
+          "label": "Positive ROI documented (time savings/retention/sales)",
+          "label_he": "ROI חיובי (חיסכון זמן/שימור/מכירות) מתועד",
+          "type": "evidence",
+          "evidence_types": ["attachment", "link", "note"],
+          "min_count": 1
+        },
+        {
+          "key": "documentation_complete",
+          "label": "Full documentation: usage, limits, common issues, privacy",
+          "label_he": "תיעוד מלא: איך משתמשים, גבולות, תקלות נפוצות, פרטיות",
+          "type": "evidence",
+          "evidence_types": ["attachment", "link"],
+          "min_count": 1
+        },
+        {
+          "key": "monitoring_alerts",
+          "label": "Monitoring + alerts configured for metrics/errors",
+          "label_he": "Monitoring + Alerts מוגדרים למדדים/שגיאות",
+          "type": "checkbox"
+        },
+        {
+          "key": "rollback_ready",
+          "label": "Rollback plan ready (how to revert without breaking)",
+          "label_he": "Rollback plan מוכן (איך חוזרים אחורה בלי לשבור)",
+          "type": "checkbox"
+        }
+      ],
+      "optional": [
+        {
+          "key": "cost_optimized",
+          "label": "Running costs optimized (if relevant)",
+          "label_he": "עלויות הרצה עברו אופטימיזציה (אם רלוונטי)",
+          "type": "note"
+        }
+      ],
+      "blockers": [
+        {
+          "key": "unresolved_high_risk",
+          "label": "High risk level without adequate mitigation/control",
+          "label_he": "Risk level גבוה ללא מענה/בקרה מספקת",
+          "type": "rule",
+          "rule": "risk_level == 'high' && mitigation_plan.exists != true"
+        }
+      ]
+    },
+    {
+      "id": "any_to_archive",
+      "from": "*",
+      "to": "archived",
+      "title": "Any → Archive",
+      "title_he": "כל שלב → ארכיון",
+      "goal": "Close the loop: why we stopped and what we learned",
+      "goal_he": "לסגור לולאה: למה עצרנו ומה למדנו",
+      "required": [
+        {
+          "key": "learnings_written",
+          "label": "Learnings documented (at least 3 short insights)",
+          "label_he": "מה למדנו (לפחות 3 תובנות קצרות)",
+          "type": "field",
+          "field": "learnings"
+        },
+        {
+          "key": "decision_set_archive",
+          "label": "Decision set to archive or iterate",
+          "label_he": "Decision מוגדר ל-archive או iterate",
+          "type": "field",
+          "field": "decision"
+        },
+        {
+          "key": "retention_job",
+          "label": "Retention/deletion configured per policy (90 days after archive)",
+          "label_he": "Retention/מחיקה הוגדרו לפי policy (90 יום אחרי archive)",
+          "type": "checkbox"
+        }
+      ],
+      "optional": [
+        {
+          "key": "public_summary",
+          "label": "Short summary for team: what closed and what was archived",
+          "label_he": "סיכום קצר לצוות: מה נסגר ומה נגנז",
+          "type": "note"
+        }
+      ],
+      "blockers": []
+    }
+  ],
+  "metric_thresholds": {
+    "teacher_satisfaction": {
+      "description": "Teacher satisfaction score (0-100)",
+      "description_he": "ציון שביעות רצון מורים (0-100)",
+      "source": "survey"
+    },
+    "task_completion": {
+      "description": "Task/practice completion rate",
+      "description_he": "אחוז השלמת משימות/תרגולים",
+      "source": "telemetry"
+    },
+    "nps": {
+      "description": "Net Promoter Score (0-10)",
+      "description_he": "ציון NPS (0-10)",
+      "source": "survey"
+    },
+    "satisfaction": {
+      "description": "General satisfaction score (0-100)",
+      "description_he": "ציון שביעות רצון כללי (0-100)",
+      "source": "survey"
+    }
+  },
+  "evidence_types": {
+    "attachment": {
+      "description": "File uploaded to storage",
+      "description_he": "קובץ שהועלה לאחסון"
+    },
+    "link": {
+      "description": "External URL",
+      "description_he": "קישור חיצוני"
+    },
+    "note": {
+      "description": "Free text note",
+      "description_he": "הערה טקסטואלית"
+    }
+  }
+}

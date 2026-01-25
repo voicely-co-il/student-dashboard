@@ -52,8 +52,18 @@ import {
   Search,
   Users,
   Calendar,
+  ChevronDown,
+  Terminal,
+  Info,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 type ContentTypeFilter = "all" | "podcast" | "slides" | "infographic" | "question";
 
@@ -321,6 +331,144 @@ function CreateContentDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Transcript Picker Dialog - select transcripts from the database
+function SetupGuide() {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const steps = [
+    {
+      title: "התחל את MCP Server",
+      command: "notebooklm-mcp --transport http --port 3456",
+      description: "מפעיל את השרת המקומי שמתחבר ל-NotebookLM",
+    },
+    {
+      title: "עבד את התור",
+      command: "npx tsx scripts/process-notebooklm-queue.ts",
+      description: "מעבד את כל הפריטים שממתינים בתור",
+    },
+    {
+      title: "הרצה רציפה (אופציונלי)",
+      command: "npx tsx scripts/process-notebooklm-queue.ts --watch",
+      description: "מריץ כל 30 שניות אוטומטית כשהמחשב דלוק",
+    },
+  ];
+
+  const troubleshooting = [
+    {
+      problem: "שגיאת Authentication",
+      solution: "הרץ notebooklm-mcp-auth והתחבר מחדש לחשבון Google",
+    },
+    {
+      problem: "MCP Server לא מגיב",
+      solution: "בדוק שהפורט 3456 פנוי או הפעל מחדש את השרת",
+    },
+  ];
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="border-dashed">
+        <CollapsibleTrigger asChild>
+          <CardContent className="p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <Terminal className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="font-medium flex items-center gap-2">
+                    מדריך הפעלה
+                    <Badge variant="outline" className="text-xs">Worker מקומי</Badge>
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    איך לעבד את התור באופן מקומי על המחשב שלך
+                  </p>
+                </div>
+              </div>
+              <ChevronDown className={cn(
+                "w-5 h-5 text-muted-foreground transition-transform",
+                isOpen && "rotate-180"
+              )} />
+            </div>
+          </CardContent>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent>
+          <CardContent className="pt-0 px-4 pb-4 space-y-6">
+            {/* Divider */}
+            <div className="border-t" />
+
+            {/* How it works */}
+            <div>
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <Info className="w-4 h-4 text-blue-500" />
+                איך זה עובד?
+              </h4>
+              <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-2">
+                <p>1. אתה יוצר תוכן בממשק → נוצרת רשומה "ממתין" ב-DB</p>
+                <p>2. הסקריפט המקומי קורא את התור ומעבד אותו דרך NotebookLM</p>
+                <p>3. התוצרים (פודקסט/מצגת/אינפוגרפיקה) נשמרים ומוצגים כאן</p>
+              </div>
+            </div>
+
+            {/* Steps */}
+            <div>
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                שלבי הפעלה
+              </h4>
+              <div className="space-y-3">
+                {steps.map((step, i) => (
+                  <div key={i} className="border rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="secondary" className="w-6 h-6 rounded-full p-0 flex items-center justify-center text-xs">
+                        {i + 1}
+                      </Badge>
+                      <span className="font-medium text-sm">{step.title}</span>
+                    </div>
+                    <code className="block bg-zinc-900 text-zinc-100 rounded px-3 py-2 text-xs font-mono mb-2 overflow-x-auto" dir="ltr">
+                      {step.command}
+                    </code>
+                    <p className="text-xs text-muted-foreground">{step.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Troubleshooting */}
+            <div>
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-orange-500" />
+                פתרון בעיות
+              </h4>
+              <div className="space-y-2">
+                {troubleshooting.map((item, i) => (
+                  <div key={i} className="flex items-start gap-3 text-sm">
+                    <Badge variant="outline" className="shrink-0 text-xs">בעיה</Badge>
+                    <div>
+                      <span className="font-medium">{item.problem}</span>
+                      <span className="text-muted-foreground"> → {item.solution}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Files reference */}
+            <div className="bg-muted/30 rounded-lg p-3 text-xs">
+              <p className="font-medium mb-2">קבצים רלוונטיים:</p>
+              <ul className="space-y-1 text-muted-foreground font-mono" dir="ltr">
+                <li>scripts/process-notebooklm-queue.ts - Worker</li>
+                <li>scripts/check-queue.ts - בדיקת סטטוס</li>
+                <li>~/.notebooklm-mcp/auth.json - Cookies</li>
+              </ul>
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
 
@@ -721,6 +869,9 @@ export default function NotebookLMTab() {
           </CardContent>
         </Card>
       )}
+
+      {/* Setup Guide */}
+      <SetupGuide />
     </div>
   );
 }
