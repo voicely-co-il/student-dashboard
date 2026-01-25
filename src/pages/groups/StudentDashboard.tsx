@@ -12,17 +12,25 @@ import { useGroupStudent, useDailyPlan, useActiveChallenge, useChallengeLeaderbo
 import { Loader2 } from 'lucide-react';
 import { ExerciseWithProgress } from '@/types/groups';
 
-// Demo student data for testing
+// Real demo student (Adi) - data from actual transcripts
 const DEMO_STUDENT = {
-  id: '2cb0f5bf-c53b-44d6-a1ba-05b1d59f0291',
-  student_name: 'תלמיד דמו',
-  avatar_emoji: '🎤',
-  current_streak: 5,
-  total_xp: 500,
-  current_level: 3,
+  id: '72578603-7d42-47d5-9a42-668864c499fb',
+  student_name: 'עדי',
+  avatar_emoji: '🌟',
+  current_streak: 3,
+  total_xp: 850,
+  current_level: 4,
   onboarding_completed: true,
   age_group: '10-12' as const,
 };
+
+// Tips from recent lesson (Jan 22, 2026 - Group Lesson)
+const LESSON_TIPS = [
+  { emoji: '🎵', text: 'תשמרי על הנשימה בקטעים הארוכים של Diamonds - זה יעזור לך להגיע לסוף הפסוק', source: 'מהשיעור האחרון' },
+  { emoji: '💎', text: 'את עושה עבודה מעולה עם הויברטו! תמשיכי לתרגל את זה', source: 'ענבל אמרה' },
+  { emoji: '🎤', text: 'נסי לשיר יותר מהבטן ופחות מהגרון - זה ישמור על הקול שלך', source: 'טיפ מהשיעור' },
+  { emoji: '✨', text: 'השירה שלך ב-"Shine bright like a diamond" הייתה מצוינת! כל הכבוד!', source: 'פידבק מענבל' },
+];
 
 // =====================================================
 // STUDENT DASHBOARD PAGE
@@ -160,26 +168,30 @@ export default function StudentDashboard() {
           />
         )}
 
-        {/* Quick Tips */}
-        <QuickTip />
+        {/* Lesson Tips */}
+        <LessonTip isDemo={isDemo} />
       </div>
     </StudentLayout>
   );
 }
 
 // =====================================================
-// QUICK TIP COMPONENT
+// LESSON TIP COMPONENT
+// Tips from the most recent lesson
 // =====================================================
 
-function QuickTip() {
-  const tips = [
-    { emoji: '💡', text: 'תרגול קצר כל יום עדיף על אימון ארוך פעם בשבוע' },
-    { emoji: '🎤', text: 'תמיד התחילו עם חימום קול - זה שומר על הקול שלכם' },
-    { emoji: '🎧', text: 'הקשיבו להקלטות שלכם - זו הדרך הטובה ביותר להשתפר' },
-    { emoji: '💪', text: 'גם אם קשה - המשיכו! ההתמדה היא המפתח להצלחה' },
-    { emoji: '🌟', text: 'אל תשוו את עצמכם לאחרים - התחרו רק בעצמכם מאתמול' },
+function LessonTip({ isDemo }: { isDemo: boolean }) {
+  // Generic tips for non-demo users
+  const genericTips = [
+    { emoji: '💡', text: 'תרגול קצר כל יום עדיף על אימון ארוך פעם בשבוע', source: 'טיפ כללי' },
+    { emoji: '🎤', text: 'תמיד התחילו עם חימום קול - זה שומר על הקול שלכם', source: 'טיפ כללי' },
+    { emoji: '🎧', text: 'הקשיבו להקלטות שלכם - זו הדרך הטובה ביותר להשתפר', source: 'טיפ כללי' },
+    { emoji: '💪', text: 'גם אם קשה - המשיכו! ההתמדה היא המפתח להצלחה', source: 'טיפ כללי' },
+    { emoji: '🌟', text: 'אל תשוו את עצמכם לאחרים - התחרו רק בעצמכם מאתמול', source: 'טיפ כללי' },
   ];
 
+  // Use lesson tips for demo mode (Adi), generic tips otherwise
+  const tips = isDemo ? LESSON_TIPS : genericTips;
   const tip = tips[Math.floor(Math.random() * tips.length)];
 
   return (
@@ -187,8 +199,20 @@ function QuickTip() {
       <div className="flex gap-3">
         <span className="text-2xl">{tip.emoji}</span>
         <div>
-          <h4 className="font-medium text-purple-900 text-sm">טיפ היום</h4>
+          <div className="flex items-center gap-2">
+            <h4 className="font-medium text-purple-900 text-sm">
+              {isDemo ? 'מהשיעור האחרון' : 'טיפ היום'}
+            </h4>
+            {isDemo && (
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                22/01
+              </span>
+            )}
+          </div>
           <p className="text-purple-700 text-sm mt-0.5">{tip.text}</p>
+          {tip.source && tip.source !== 'טיפ כללי' && (
+            <p className="text-purple-500 text-xs mt-1">{tip.source}</p>
+          )}
         </div>
       </div>
     </div>
