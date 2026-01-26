@@ -15,6 +15,8 @@ import TeacherDashboard from './TeacherDashboard';
 import TeacherChallengesPage from './TeacherChallengesPage';
 import CreateChallengePage from './CreateChallengePage';
 import TeacherAnalyticsPage from './TeacherAnalyticsPage';
+import TeacherStudentProfilePage from './TeacherStudentProfilePage';
+import TeacherChallengeDetailPage from './TeacherChallengeDetailPage';
 
 // Auth Pages
 import RegisterPage from './RegisterPage';
@@ -44,10 +46,10 @@ export default function GroupsRoutes() {
 
       {/* Teacher Routes */}
       <Route path="teacher" element={<TeacherDashboard />} />
-      <Route path="teacher/students/:studentId" element={<PlaceholderPage title="פרופיל תלמיד" />} />
+      <Route path="teacher/students/:studentId" element={<TeacherStudentProfilePage />} />
       <Route path="teacher/challenges" element={<TeacherChallengesPage />} />
       <Route path="teacher/challenges/new" element={<CreateChallengePage />} />
-      <Route path="teacher/challenges/:challengeId" element={<PlaceholderPage title="פרטי אתגר" />} />
+      <Route path="teacher/challenges/:challengeId" element={<TeacherChallengeDetailPage />} />
       <Route path="teacher/analytics" element={<TeacherAnalyticsPage />} />
 
       {/* Default redirect */}

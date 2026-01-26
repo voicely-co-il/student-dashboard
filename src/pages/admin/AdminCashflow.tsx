@@ -8,6 +8,7 @@ import CashflowTable from "@/components/admin/cashflow/CashflowTable";
 import CashflowSummaryBar from "@/components/admin/cashflow/CashflowSummaryBar";
 import CategoryManageDialog from "@/components/admin/cashflow/CategoryManageDialog";
 import CashflowSettingsDialog from "@/components/admin/cashflow/CashflowSettingsDialog";
+import ExpenseOptimization from "@/components/admin/cashflow/ExpenseOptimization";
 import {
   useCashflowCategories,
   useCashflowEntries,
@@ -212,6 +213,9 @@ export default function AdminCashflow() {
             />
           </TabsContent>
         </Tabs>
+
+        {/* Expense Optimization Section */}
+        <ExpenseOptimization />
       </div>
 
       {/* Summary Bar */}
