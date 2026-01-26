@@ -33,12 +33,20 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
-    label: 'קבוצות (בטא)',
+    label: 'קבוצות - תלמיד',
     items: [
-      { href: '/groups/student?demo=true', label: 'דשבורד תלמידה', icon: UsersRound, description: 'עדי - דמו' },
-      { href: '/groups/teacher', label: 'דשבורד מורה', icon: ClipboardList, description: 'ניהול קבוצה' },
-      { href: '/groups/student/practice', label: 'תרגול', icon: Mic2, description: 'תרגילי קול' },
-      { href: '/groups/student/challenges', label: 'אתגרים', icon: Trophy, description: 'אתגרים שבועיים' },
+      { href: '/groups/student?demo=true', label: 'דשבורד', icon: UsersRound, description: 'עדי - דמו' },
+      { href: '/groups/student/practice?demo=true', label: 'תרגול', icon: Mic2, description: 'תרגילי קול' },
+      { href: '/groups/student/challenges?demo=true', label: 'אתגרים', icon: Trophy, description: 'אתגרים שבועיים' },
+      { href: '/groups/student/group?demo=true', label: 'הקבוצה', icon: Users, description: 'מידע על הקבוצה' },
+    ],
+  },
+  {
+    label: 'קבוצות - מורה',
+    items: [
+      { href: '/groups/teacher', label: 'דשבורד', icon: ClipboardList, description: 'סקירת קבוצה' },
+      { href: '/groups/teacher/challenges', label: 'אתגרים', icon: Trophy, description: 'ניהול אתגרים' },
+      { href: '/groups/teacher/analytics', label: 'אנליטיקס', icon: BarChart3, description: 'נתוני קבוצה' },
     ],
   },
   {

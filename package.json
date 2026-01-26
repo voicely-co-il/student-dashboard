@@ -17,7 +17,9 @@
     "scrape": "npx tsx scripts/scrape-websites.ts",
     "scrape:main": "npx tsx scripts/scrape-websites.ts --main",
     "scrape:juniors": "npx tsx scripts/scrape-websites.ts --juniors",
-    "seed:website": "npx tsx scripts/seed-website-content.ts"
+    "seed:website": "npx tsx scripts/seed-website-content.ts",
+    "sync:expenses": "npx tsx scripts/sync-notion-expenses.ts",
+    "sync:cashflow": "npx tsx scripts/analyze-cashflow.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

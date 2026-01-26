@@ -54,6 +54,8 @@ export default function AdminCashflow() {
   );
   const alertMinimum = parseFloat(settings.alert_minimum || "0");
   const vatRate = parseFloat(settings.vat_rate || "0.18");
+  const incomeTaxRate = parseFloat(settings.income_tax_rate || "0.30");
+  const socialSecurityRate = parseFloat(settings.social_security_rate || "0.12");
 
   // Calculate summary values
   const summaryValues = useMemo(() => {
@@ -221,6 +223,8 @@ export default function AdminCashflow() {
         periodCount={currentPeriods.length}
         periodType={activeTab}
         vatRate={vatRate}
+        incomeTaxRate={incomeTaxRate}
+        socialSecurityRate={socialSecurityRate}
       />
     </div>
   );

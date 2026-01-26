@@ -1,10 +1,22 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Pages
+// Student Pages
 import StudentDashboard from './StudentDashboard';
-import TeacherDashboard from './TeacherDashboard';
 import PracticePage from './PracticePage';
 import ExercisePage from './ExercisePage';
+import ChallengesPage from './ChallengesPage';
+import ChallengeDetailPage from './ChallengeDetailPage';
+import ChallengeRecordPage from './ChallengeRecordPage';
+import StudentProfilePage from './StudentProfilePage';
+import GroupInfoPage from './GroupInfoPage';
+
+// Teacher Pages
+import TeacherDashboard from './TeacherDashboard';
+import TeacherChallengesPage from './TeacherChallengesPage';
+import CreateChallengePage from './CreateChallengePage';
+import TeacherAnalyticsPage from './TeacherAnalyticsPage';
+
+// Auth Pages
 import RegisterPage from './RegisterPage';
 import OnboardingPage from './OnboardingPage';
 
@@ -24,19 +36,19 @@ export default function GroupsRoutes() {
       <Route path="student" element={<StudentDashboard />} />
       <Route path="student/practice" element={<PracticePage />} />
       <Route path="student/practice/:exerciseId" element={<ExercisePage />} />
-      <Route path="student/challenges" element={<PlaceholderPage title="אתגרים" />} />
-      <Route path="student/challenges/:challengeId" element={<PlaceholderPage title="אתגר" />} />
-      <Route path="student/challenges/:challengeId/record" element={<PlaceholderPage title="הקלטת אתגר" />} />
-      <Route path="student/group" element={<PlaceholderPage title="הקבוצה שלי" />} />
-      <Route path="student/profile" element={<PlaceholderPage title="פרופיל" />} />
+      <Route path="student/challenges" element={<ChallengesPage />} />
+      <Route path="student/challenges/:challengeId" element={<ChallengeDetailPage />} />
+      <Route path="student/challenges/:challengeId/record" element={<ChallengeRecordPage />} />
+      <Route path="student/group" element={<GroupInfoPage />} />
+      <Route path="student/profile" element={<StudentProfilePage />} />
 
       {/* Teacher Routes */}
       <Route path="teacher" element={<TeacherDashboard />} />
       <Route path="teacher/students/:studentId" element={<PlaceholderPage title="פרופיל תלמיד" />} />
-      <Route path="teacher/challenges" element={<PlaceholderPage title="ניהול אתגרים" />} />
-      <Route path="teacher/challenges/new" element={<PlaceholderPage title="אתגר חדש" />} />
+      <Route path="teacher/challenges" element={<TeacherChallengesPage />} />
+      <Route path="teacher/challenges/new" element={<CreateChallengePage />} />
       <Route path="teacher/challenges/:challengeId" element={<PlaceholderPage title="פרטי אתגר" />} />
-      <Route path="teacher/analytics" element={<PlaceholderPage title="אנליטיקס" />} />
+      <Route path="teacher/analytics" element={<TeacherAnalyticsPage />} />
 
       {/* Default redirect */}
       <Route path="*" element={<Navigate to="/groups/student" replace />} />
@@ -45,7 +57,7 @@ export default function GroupsRoutes() {
 }
 
 // =====================================================
-// PLACEHOLDER PAGE (for routes not yet implemented)
+// PLACEHOLDER PAGE (for routes not yet fully implemented)
 // =====================================================
 
 function PlaceholderPage({ title }: { title: string }) {
