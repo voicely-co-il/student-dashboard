@@ -21,14 +21,10 @@ import { useNotionCRM } from '@/hooks/admin/useNotionCRM';
 import StudentSessionsCard from './StudentSessionsCard';
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Tooltip
 } from 'recharts';
 
 const COLORS = {
@@ -339,7 +335,7 @@ const AnalyticsOverview = () => {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Topics Chart */}
+        {/* Top Topics Chart - Mobile-friendly list format */}
         <Card className="playful-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -349,36 +345,28 @@ const AnalyticsOverview = () => {
           </CardHeader>
           <CardContent>
             {data?.topTopics && data.topTopics.length > 0 ? (
-              <div className="h-[300px]" dir="ltr">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={data.topTopics.slice(0, 8)}
-                    layout="vertical"
-                    margin={{ top: 5, right: 20, left: 100, bottom: 5 }}
-                  >
-                    <XAxis type="number" />
-                    <YAxis
-                      type="category"
-                      dataKey="topic"
-                      tick={{ fontSize: 12 }}
-                      width={90}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--background))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        direction: 'rtl',
-                      }}
-                      formatter={(value: number) => [`${value} אזכורים`, 'כמות']}
-                    />
-                    <Bar
-                      dataKey="count"
-                      fill={COLORS.green}
-                      radius={[0, 4, 4, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="space-y-3">
+                {data.topTopics.slice(0, 8).map((item, index) => {
+                  const maxCount = Math.max(...data.topTopics.slice(0, 8).map(t => t.count));
+                  const percentage = (item.count / maxCount) * 100;
+                  return (
+                    <div key={index} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-foreground truncate ml-2">{item.topic}</span>
+                        <span className="text-muted-foreground whitespace-nowrap">{item.count} אזכורים</span>
+                      </div>
+                      <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${percentage}%`,
+                            backgroundColor: COLORS.green,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <EmptyState message="אין נתוני נושאים" />
@@ -386,7 +374,7 @@ const AnalyticsOverview = () => {
           </CardContent>
         </Card>
 
-        {/* Top Skills Chart */}
+        {/* Top Skills Chart - Mobile-friendly list format */}
         <Card className="playful-shadow">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg">
@@ -396,36 +384,28 @@ const AnalyticsOverview = () => {
           </CardHeader>
           <CardContent>
             {data?.topSkills && data.topSkills.length > 0 ? (
-              <div className="h-[300px]" dir="ltr">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={data.topSkills.slice(0, 8)}
-                    layout="vertical"
-                    margin={{ top: 5, right: 20, left: 100, bottom: 5 }}
-                  >
-                    <XAxis type="number" />
-                    <YAxis
-                      type="category"
-                      dataKey="skill"
-                      tick={{ fontSize: 12 }}
-                      width={90}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--background))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        direction: 'rtl',
-                      }}
-                      formatter={(value: number) => [`${value} תרגולים`, 'כמות']}
-                    />
-                    <Bar
-                      dataKey="count"
-                      fill={COLORS.mint}
-                      radius={[0, 4, 4, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="space-y-3">
+                {data.topSkills.slice(0, 8).map((item, index) => {
+                  const maxCount = Math.max(...data.topSkills.slice(0, 8).map(s => s.count));
+                  const percentage = (item.count / maxCount) * 100;
+                  return (
+                    <div key={index} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-foreground truncate ml-2">{item.skill}</span>
+                        <span className="text-muted-foreground whitespace-nowrap">{item.count} תרגולים</span>
+                      </div>
+                      <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${percentage}%`,
+                            backgroundColor: COLORS.mint,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <EmptyState message="אין נתוני מיומנויות" />
