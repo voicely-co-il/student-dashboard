@@ -84,12 +84,15 @@ const AdminNavBar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
+      const target = e.target as Node;
+      // Don't close if clicking inside menu trigger area or drawer
+      if (menuRef.current?.contains(target)) return;
+      if (drawerRef.current?.contains(target)) return;
+      setMenuOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -206,7 +209,7 @@ const AdminNavBar = () => {
           />
 
           {/* Drawer */}
-          <div className="md:hidden fixed top-0 right-0 bottom-0 w-[85%] max-w-[320px] bg-background z-50 shadow-2xl animate-in slide-in-from-right duration-300">
+          <div ref={drawerRef} className="md:hidden fixed top-0 right-0 bottom-0 w-[85%] max-w-[320px] bg-background z-50 shadow-2xl animate-in slide-in-from-right duration-300">
             {/* Drawer header */}
             <div className="flex items-center justify-between p-4 border-b">
               <div className="flex items-center gap-2 text-amber-600">

@@ -9,6 +9,7 @@ import CashflowSummaryBar from "@/components/admin/cashflow/CashflowSummaryBar";
 import CategoryManageDialog from "@/components/admin/cashflow/CategoryManageDialog";
 import CashflowSettingsDialog from "@/components/admin/cashflow/CashflowSettingsDialog";
 import ExpenseOptimization from "@/components/admin/cashflow/ExpenseOptimization";
+import BusinessInsights from "@/components/admin/cashflow/BusinessInsights";
 import {
   useCashflowCategories,
   useCashflowEntries,
@@ -214,8 +215,15 @@ export default function AdminCashflow() {
           </TabsContent>
         </Tabs>
 
-        {/* Expense Optimization Section */}
-        <ExpenseOptimization />
+        {/* Business Insights Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <BusinessInsights
+            vatRate={vatRate}
+            incomeTaxRate={incomeTaxRate}
+            socialSecurityRate={socialSecurityRate}
+          />
+          <ExpenseOptimization />
+        </div>
       </div>
 
       {/* Summary Bar */}
