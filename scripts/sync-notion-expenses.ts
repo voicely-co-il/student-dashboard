@@ -11,8 +11,7 @@ const NOTION_EXPENSES_DB = "dd87657b-24e8-4a2a-a262-d71e2306f109";
 
 interface NotionExpense {
   name: string;
-  monthlyCost: number | null;
-  isInbalTool: boolean;
+  monthlyCost: number;
 }
 
 async function fetchNotionExpenses(): Promise<NotionExpense[]> {
@@ -45,10 +44,10 @@ async function fetchNotionExpenses(): Promise<NotionExpense[]> {
     for (const page of data.results || []) {
       const props = page.properties;
       const name = props["שם"]?.title?.[0]?.plain_text || "Unknown";
-      const monthlyCost = props["עלות חודשית ₪"]?.number || null;
-      
+      const monthlyCost = props["עלות חודשית ₪"]?.number || 0;
+
       if (monthlyCost && monthlyCost > 0) {
-        expenses.push({ name, monthlyCost, isInbalTool: true });
+        expenses.push({ name, monthlyCost });
       }
     }
 
@@ -56,7 +55,8 @@ async function fetchNotionExpenses(): Promise<NotionExpense[]> {
     startCursor = data.next_cursor;
   }
 
-  return expenses;
+  // Sort by cost descending
+  return expenses.sort((a, b) => b.monthlyCost - a.monthlyCost);
 }
 
 function getWeeklyPeriods(startDate: Date, count: number): string[] {
@@ -71,28 +71,47 @@ function getWeeklyPeriods(startDate: Date, count: number): string[] {
   return periods;
 }
 
-async function main() {
-  console.log("Fetching expenses from Notion...");
-  const expenses = await fetchNotionExpenses();
-
-  const totalMonthly = expenses.reduce((sum, e) => sum + (e.monthlyCost || 0), 0);
-  const weeklyAmount = Math.round(totalMonthly / 4.33);
-
-  console.log("Found " + expenses.length + " expenses");
-  console.log("Total monthly: NIS " + totalMonthly);
-  console.log("Weekly amount: NIS " + weeklyAmount);
-
-  // Get the category
-  const { data: category } = await supabase
+async function getOrCreateCategory(name: string, sortOrder: number): Promise<string> {
+  // Check if category exists
+  const { data: existing } = await supabase
     .from("cashflow_categories")
     .select("id")
-    .eq("name", "כלים ותוכנות")
+    .eq("name", name)
     .single();
 
-  if (!category) {
-    console.error("Category not found!");
-    return;
+  if (existing) {
+    return existing.id;
   }
+
+  // Create new category
+  const { data: created, error } = await supabase
+    .from("cashflow_categories")
+    .insert({
+      name,
+      type: "expense",
+      sort_order: sortOrder,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to create category ${name}: ${error.message}`);
+  }
+
+  return created.id;
+}
+
+async function main() {
+  console.log("Fetching expenses from Notion...\n");
+  const expenses = await fetchNotionExpenses();
+
+  const totalMonthly = expenses.reduce((sum, e) => sum + e.monthlyCost, 0);
+
+  console.log("=== Tools from Notion ===");
+  expenses.forEach((e, i) => {
+    console.log(`${i + 1}. ${e.name}: ₪${e.monthlyCost}/month`);
+  });
+  console.log(`\nTotal: ₪${totalMonthly.toFixed(2)}/month (${expenses.length} tools)`);
 
   // Get settings for start date
   const { data: settings } = await supabase
@@ -103,65 +122,78 @@ async function main() {
 
   const startDateStr = settings?.setting_value || "2025-10-27";
   const startDate = new Date(startDateStr);
-
-  console.log("\nStart date from settings: " + startDateStr);
-
-  // Get 13 weekly periods
   const weeklyPeriods = getWeeklyPeriods(startDate, 13);
 
-  console.log("\nSyncing to weekly periods:");
+  console.log("\nStart date: " + startDateStr);
+  console.log("Creating categories and syncing entries...\n");
 
-  // Create notes from expenses
-  const notes = expenses.map(e => e.name + ": NIS " + e.monthlyCost).join("\n");
+  // Delete old combined category entries
+  const { data: oldCategory } = await supabase
+    .from("cashflow_categories")
+    .select("id")
+    .eq("name", "כלים ותוכנות")
+    .single();
 
-  // Upsert for each weekly period
-  for (const period of weeklyPeriods) {
-    const { error } = await supabase
+  if (oldCategory) {
+    await supabase
       .from("cashflow_entries")
-      .upsert({
-        category_id: category.id,
-        period_type: "weekly",
-        period_start: period,
-        amount: weeklyAmount,
-        notes: "Tools & Software (from Notion):\n" + notes,
-      }, {
-        onConflict: "category_id,period_type,period_start",
-      });
+      .delete()
+      .eq("category_id", oldCategory.id);
 
-    if (error) {
-      console.log("  X " + period + ": " + error.message);
-    } else {
-      console.log("  V " + period + ": NIS " + weeklyAmount);
-    }
+    await supabase
+      .from("cashflow_categories")
+      .delete()
+      .eq("id", oldCategory.id);
+
+    console.log("Deleted old combined category 'כלים ותוכנות'\n");
   }
 
-  // Also sync monthly
-  const now = new Date();
-  console.log("\nSyncing monthly periods:");
-  
-  for (let i = 0; i < 12; i++) {
-    const monthStart = new Date(now.getFullYear(), now.getMonth() - 6 + i, 1);
-    const monthStartStr = monthStart.toISOString().split("T")[0];
+  // Create category and entries for each tool
+  let sortOrder = 100; // Start after other expense categories
 
-    const { error } = await supabase
-      .from("cashflow_entries")
-      .upsert({
-        category_id: category.id,
-        period_type: "monthly",
-        period_start: monthStartStr,
-        amount: totalMonthly,
-        notes: "Tools & Software (from Notion):\n" + notes,
-      }, {
-        onConflict: "category_id,period_type,period_start",
-      });
+  for (const expense of expenses) {
+    const categoryId = await getOrCreateCategory(expense.name, sortOrder++);
+    const weeklyAmount = Math.round(expense.monthlyCost / 4.33);
 
-    if (error) {
-      console.log("  X " + monthStartStr + ": " + error.message);
-    } else {
-      console.log("  V " + monthStartStr + ": NIS " + totalMonthly);
+    // Sync weekly periods
+    for (const period of weeklyPeriods) {
+      await supabase
+        .from("cashflow_entries")
+        .upsert({
+          category_id: categoryId,
+          period_type: "weekly",
+          period_start: period,
+          amount: weeklyAmount,
+        }, {
+          onConflict: "category_id,period_type,period_start",
+        });
     }
+
+    // Sync monthly periods
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - 6 + i, 1);
+      const monthStartStr = monthStart.toISOString().split("T")[0];
+
+      await supabase
+        .from("cashflow_entries")
+        .upsert({
+          category_id: categoryId,
+          period_type: "monthly",
+          period_start: monthStartStr,
+          amount: expense.monthlyCost,
+        }, {
+          onConflict: "category_id,period_type,period_start",
+        });
+    }
+
+    console.log(`✓ ${expense.name}: ₪${expense.monthlyCost}/month (₪${weeklyAmount}/week)`);
   }
 
+  console.log("\n=== Summary ===");
+  console.log(`Created ${expenses.length} expense categories`);
+  console.log(`Weekly total: ₪${Math.round(totalMonthly / 4.33)}`);
+  console.log(`Monthly total: ₪${totalMonthly.toFixed(2)}`);
   console.log("\nDone!");
 }
 
