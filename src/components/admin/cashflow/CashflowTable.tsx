@@ -68,7 +68,7 @@ function EditableCell({
       className="cursor-pointer px-1 py-0.5 text-sm text-center hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded min-h-[28px] flex items-center justify-center"
       dir="ltr"
     >
-      {value !== 0 ? value.toLocaleString("he-IL") : "—"}
+      {value !== 0 ? `₪${value.toLocaleString("he-IL")}` : "—"}
     </div>
   );
 }
@@ -86,7 +86,7 @@ function SummaryCell({ value, alertMinimum }: { value: number; alertMinimum?: nu
       }`}
       dir="ltr"
     >
-      {value.toLocaleString("he-IL")}
+      ₪{value.toLocaleString("he-IL")}
     </div>
   );
 }
@@ -327,7 +327,7 @@ export default function CashflowTable({
             {calculations.map((calc) => (
               <td key={calc.period} className="px-1 py-1.5 border-b border-l">
                 <div className="px-1 py-0.5 text-sm font-bold text-center text-red-600 dark:text-red-400" dir="ltr">
-                  {calc.totalExpenses.toLocaleString("he-IL")}
+                  ₪{calc.totalExpenses.toLocaleString("he-IL")}
                 </div>
               </td>
             ))}
@@ -369,7 +369,7 @@ export default function CashflowTable({
                 {calculations.map((calc) => (
                   <td key={calc.period} className="px-1 py-1.5 border-b border-l">
                     <div className="px-1 py-0.5 text-sm font-bold text-center text-orange-600 dark:text-orange-400" dir="ltr">
-                      {calc.totalOtherExpenses.toLocaleString("he-IL")}
+                      ₪{calc.totalOtherExpenses.toLocaleString("he-IL")}
                     </div>
                   </td>
                 ))}
@@ -385,7 +385,7 @@ export default function CashflowTable({
             {calculations.map((calc) => (
               <td key={calc.period} className="px-1 py-1.5 border-b border-l">
                 <div className="px-1 py-0.5 text-sm font-bold text-center text-red-700 dark:text-red-300" dir="ltr">
-                  {calc.totalCashOut.toLocaleString("he-IL")}
+                  ₪{calc.totalCashOut.toLocaleString("he-IL")}
                 </div>
               </td>
             ))}
