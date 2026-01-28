@@ -264,14 +264,18 @@ export function useSonioxStream(options: UseSonioxStreamOptions = {}) {
         console.log('[Soniox] WebSocket connected, sending config...');
 
         // Send configuration per Soniox API docs
+        // See: https://soniox.com/docs/stt/api-reference/websocket-api
         const config = {
           api_key: token,
           model: 'stt-rt-preview',
           language_hints: languageHints,
           enable_streaming_speaker_diarization: enableSpeakerDiarization,
-          audio_format: 's16le',
-          sample_rate: 16000,
-          num_channels: 1,
+          include_nonfinal: true, // Get interim results
+          speech_context: {
+            entries: [
+              { phrases: ['שירה', 'קול', 'נשימה', 'תמיכה', 'רזוננס', 'טווח', 'גבוה', 'נמוך'] }
+            ]
+          }
         };
         console.log('[Soniox] Config:', config);
         ws.send(JSON.stringify(config));
