@@ -40,21 +40,60 @@ export function LiveAssistantTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
-  // Fetch students list
+  // Fetch students list - join profiles with user_roles to get students only
   const { data: students = [] } = useQuery({
     queryKey: ['students-for-live-assistant'],
     queryFn: async () => {
+      // Get user IDs with student role
+      const { data: studentRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'student')
+        .eq('is_active', true);
+
+      if (rolesError) {
+        console.error('Error fetching student roles:', rolesError);
+        // Fallback: get all profiles if roles table fails
+        const { data: allProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, username')
+          .order('full_name');
+
+        return (allProfiles || []).map(s => ({
+          id: s.id,
+          name: s.full_name || s.username || 'ללא שם',
+          email: s.username,
+        })) as Student[];
+      }
+
+      const studentIds = studentRoles?.map(r => r.user_id) || [];
+
+      if (studentIds.length === 0) {
+        // No students found, get all profiles as fallback
+        const { data: allProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, username')
+          .order('full_name');
+
+        return (allProfiles || []).map(s => ({
+          id: s.id,
+          name: s.full_name || s.username || 'ללא שם',
+          email: s.username,
+        })) as Student[];
+      }
+
+      // Get profiles for students
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
-        .eq('role', 'student')
+        .select('id, full_name, username')
+        .in('id', studentIds)
         .order('full_name');
 
       if (error) throw error;
       return (data || []).map(s => ({
         id: s.id,
-        name: s.full_name || s.email || 'ללא שם',
-        email: s.email,
+        name: s.full_name || s.username || 'ללא שם',
+        email: s.username,
       })) as Student[];
     },
   });
@@ -130,11 +169,18 @@ export function LiveAssistantTab() {
     );
   }, [students, searchQuery]);
 
-  // Get selected student info
-  const selectedStudent = useMemo(() =>
-    students.find(s => s.id === selectedStudentId),
-    [students, selectedStudentId]
-  );
+  // Get selected student info (handles both DB students and manual entries)
+  const selectedStudent = useMemo(() => {
+    if (!selectedStudentId) return null;
+    if (selectedStudentId.startsWith('manual:')) {
+      return {
+        id: selectedStudentId,
+        name: selectedStudentId.replace('manual:', ''),
+        email: undefined,
+      } as Student;
+    }
+    return students.find(s => s.id === selectedStudentId) || null;
+  }, [students, selectedStudentId]);
 
   const {
     status,
@@ -309,39 +355,52 @@ export function LiveAssistantTab() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Dropdown */}
-            <Select
-              value={selectedStudentId || ''}
-              onValueChange={(value) => setSelectedStudentId(value || null)}
-            >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="בחר תלמיד מהרשימה..." />
-              </SelectTrigger>
-              <SelectContent>
-                {students.map((student) => (
-                  <SelectItem key={student.id} value={student.id}>
-                    <div className="flex items-center gap-2">
-                      <User className="h-3 w-3" />
-                      {student.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Dropdown - with portal for proper z-index in modals */}
+            {students.length > 0 ? (
+              <Select
+                value={selectedStudentId || ''}
+                onValueChange={(value) => setSelectedStudentId(value || null)}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="בחר תלמיד מהרשימה..." />
+                </SelectTrigger>
+                <SelectContent position="popper" className="z-[9999]">
+                  {students.map((student) => (
+                    <SelectItem key={student.id} value={student.id}>
+                      <div className="flex items-center gap-2">
+                        <User className="h-3 w-3" />
+                        {student.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex-1 text-sm text-muted-foreground p-2 border rounded-md">
+                אין תלמידים במערכת
+              </div>
+            )}
 
-            {/* Search */}
+            {/* Manual name input */}
             <div className="relative flex-1">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="חיפוש לפי שם..."
+                placeholder="או הזן שם ידנית..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    // Create a temporary student entry for manual input
+                    setSelectedStudentId(`manual:${searchQuery.trim()}`);
+                    setSearchQuery('');
+                  }
+                }}
                 className="pr-9"
               />
             </div>
           </div>
 
-          {/* Search results */}
+          {/* Search results from existing students */}
           {searchQuery && filteredStudents.length > 0 && (
             <div className="mt-2 border rounded-md max-h-32 overflow-y-auto">
               {filteredStudents.slice(0, 5).map((student) => (
@@ -360,6 +419,13 @@ export function LiveAssistantTab() {
                   )}
                 </button>
               ))}
+            </div>
+          )}
+
+          {/* Manual entry hint */}
+          {searchQuery && filteredStudents.length === 0 && (
+            <div className="mt-2 p-2 border rounded-md text-sm text-muted-foreground">
+              לחץ Enter כדי להשתמש בשם "{searchQuery}"
             </div>
           )}
 
@@ -384,14 +450,18 @@ export function LiveAssistantTab() {
           )}
 
           {/* Selected student display */}
-          {selectedStudent && (
+          {selectedStudentId && (
             <div className="mt-3 p-3 bg-primary/5 rounded-md flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                 <User className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <div className="font-medium">{selectedStudent.name}</div>
-                {selectedStudent.email && (
+                <div className="font-medium">
+                  {selectedStudentId.startsWith('manual:')
+                    ? selectedStudentId.replace('manual:', '')
+                    : selectedStudent?.name || 'תלמיד לא ידוע'}
+                </div>
+                {selectedStudent?.email && (
                   <div className="text-xs text-muted-foreground">{selectedStudent.email}</div>
                 )}
               </div>
