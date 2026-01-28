@@ -41,11 +41,17 @@ export function LiveAssistantTab() {
   const { toast } = useToast();
 
   // Fetch students list from Notion CRM (active students only)
+  // Long cache to avoid slow loading every time modal opens
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['students-for-live-assistant-crm'],
     queryFn: async () => {
+      console.log('[LiveAssistant] Fetching students from CRM...');
+      const startTime = Date.now();
+
       // Get students from Notion CRM via Edge Function
       const { data, error } = await supabase.functions.invoke('notion-crm-students');
+
+      console.log('[LiveAssistant] CRM response time:', Date.now() - startTime, 'ms');
 
       if (error) {
         console.error('Error fetching CRM students:', error);
@@ -59,15 +65,21 @@ export function LiveAssistantTab() {
 
       // Map CRM students to our Student interface
       // Filter to only active students for the dropdown
-      return data.students
+      const result = data.students
         .filter((s: any) => s.isActive)
         .map((s: any) => ({
           id: s.id, // Notion page ID
           name: s.name,
           email: s.email || s.phone || undefined,
         })) as Student[];
+
+      console.log('[LiveAssistant] Loaded', result.length, 'students');
+      return result;
     },
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes
+    gcTime: 60 * 60 * 1000, // Keep in cache for 1 hour
+    refetchOnMount: false, // Use cached data when modal opens
+    refetchOnWindowFocus: false,
   });
 
   // Fetch current/upcoming lesson from calendar
@@ -327,10 +339,27 @@ export function LiveAssistantTab() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Dropdown - students from Notion CRM */}
+            {/* Manual name input - FIRST, always available */}
+            <div className="relative flex-1">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="הזן שם תלמיד..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && searchQuery.trim()) {
+                    setSelectedStudentId(`manual:${searchQuery.trim()}`);
+                    setSearchQuery('');
+                  }
+                }}
+                className="pr-9"
+              />
+            </div>
+
+            {/* Dropdown - students from Notion CRM (loads in background) */}
             {studentsLoading ? (
               <div className="flex-1 text-sm text-muted-foreground p-2 border rounded-md animate-pulse">
-                טוען תלמידים מ-CRM...
+                טוען רשימה...
               </div>
             ) : students.length > 0 ? (
               <Select
@@ -338,7 +367,7 @@ export function LiveAssistantTab() {
                 onValueChange={(value) => setSelectedStudentId(value || null)}
               >
                 <SelectTrigger className="flex-1">
-                  <SelectValue placeholder={`בחר תלמיד (${students.length} פעילים)...`} />
+                  <SelectValue placeholder={`או בחר (${students.length})...`} />
                 </SelectTrigger>
                 <SelectContent position="popper" className="z-[9999] max-h-[300px]">
                   {students.map((student) => (
@@ -351,57 +380,40 @@ export function LiveAssistantTab() {
                   ))}
                 </SelectContent>
               </Select>
-            ) : (
-              <div className="flex-1 text-sm text-muted-foreground p-2 border rounded-md">
-                לא נמצאו תלמידים פעילים ב-CRM
-              </div>
-            )}
-
-            {/* Manual name input */}
-            <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="או הזן שם ידנית..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && searchQuery.trim()) {
-                    // Create a temporary student entry for manual input
-                    setSelectedStudentId(`manual:${searchQuery.trim()}`);
-                    setSearchQuery('');
-                  }
-                }}
-                className="pr-9"
-              />
-            </div>
+            ) : null}
           </div>
 
-          {/* Search results from existing students */}
-          {searchQuery && filteredStudents.length > 0 && (
+          {/* Search results from existing students - shows while typing */}
+          {searchQuery && students.length > 0 && (
             <div className="mt-2 border rounded-md max-h-32 overflow-y-auto">
-              {filteredStudents.slice(0, 5).map((student) => (
-                <button
-                  key={student.id}
-                  onClick={() => {
-                    setSelectedStudentId(student.id);
-                    setSearchQuery('');
-                  }}
-                  className="w-full text-right px-3 py-2 hover:bg-muted flex items-center gap-2 text-sm"
-                >
-                  <User className="h-3 w-3" />
-                  {student.name}
-                  {student.email && (
-                    <span className="text-muted-foreground text-xs">({student.email})</span>
-                  )}
-                </button>
-              ))}
+              {students
+                .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                .slice(0, 5)
+                .map((student) => (
+                  <button
+                    key={student.id}
+                    onClick={() => {
+                      setSelectedStudentId(student.id);
+                      setSearchQuery('');
+                    }}
+                    className="w-full text-right px-3 py-2 hover:bg-muted flex items-center gap-2 text-sm"
+                  >
+                    <User className="h-3 w-3" />
+                    {student.name}
+                  </button>
+                ))}
+              {students.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  לחץ Enter להשתמש בשם "{searchQuery}"
+                </div>
+              )}
             </div>
           )}
 
-          {/* Manual entry hint */}
-          {searchQuery && filteredStudents.length === 0 && (
-            <div className="mt-2 p-2 border rounded-md text-sm text-muted-foreground">
-              לחץ Enter כדי להשתמש בשם "{searchQuery}"
+          {/* Hint when no students loaded yet */}
+          {searchQuery && students.length === 0 && !studentsLoading && (
+            <div className="mt-2 text-sm text-muted-foreground">
+              לחץ Enter להשתמש בשם "{searchQuery}"
             </div>
           )}
 

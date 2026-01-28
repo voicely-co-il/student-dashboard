@@ -1,8 +1,12 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import OpenAI from "https://esm.sh/openai@4.28.0";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -67,6 +71,48 @@ async function callClaude(userMessage: string): Promise<string> {
   return result.content[0]?.text || "";
 }
 
+// Search for student context from past transcripts using embeddings
+async function getStudentContext(studentName: string, currentTranscript: string): Promise<string> {
+  if (!studentName || !OPENAI_API_KEY) return "";
+
+  try {
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+
+    // Generate embedding for current lesson topic
+    const query = `${studentName} ${currentTranscript.slice(0, 500)}`;
+    const embeddingResponse = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: query,
+    });
+
+    const queryEmbedding = embeddingResponse.data[0].embedding;
+
+    // Search past transcripts for this student
+    const { data: results, error } = await supabase.rpc("search_transcripts", {
+      query_embedding: queryEmbedding,
+      match_threshold: 0.4,
+      match_count: 5,
+      filter_student_name: studentName,
+    });
+
+    if (error || !results?.length) {
+      console.log("No past transcripts found for student:", studentName);
+      return "";
+    }
+
+    // Build context from relevant chunks
+    const contextParts = results.map((r: any) =>
+      `[שיעור קודם - ${r.similarity?.toFixed(2) || 'N/A'}]: ${r.content?.slice(0, 300) || ''}`
+    );
+
+    return contextParts.join('\n\n');
+  } catch (e) {
+    console.error("Error fetching student context:", e);
+    return "";
+  }
+}
+
 // Call OpenAI API (GPT-4.1-mini - newest model, good Hebrew support)
 async function callOpenAI(userMessage: string): Promise<string> {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -111,11 +157,25 @@ serve(async (req) => {
       );
     }
 
+    // Fetch student context from past transcripts using embeddings
+    let studentContext = "";
+    if (studentName) {
+      console.log("Fetching context for student:", studentName);
+      studentContext = await getStudentContext(studentName, transcript);
+      if (studentContext) {
+        console.log("Found student context:", studentContext.length, "chars");
+      }
+    }
+
     // Build user message
     let userMessage = `## תמלול השיעור הנוכחי:\n${transcript}\n\n`;
 
     if (studentName) {
       userMessage += `## תלמיד: ${studentName}\n\n`;
+    }
+
+    if (studentContext) {
+      userMessage += `## קטעים רלוונטיים משיעורים קודמים (נמצאו אוטומטית):\n${studentContext}\n\n`;
     }
 
     if (previousLessonSummary) {

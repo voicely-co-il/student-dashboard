@@ -252,16 +252,19 @@ export function useSonioxStream(options: UseSonioxStreamOptions = {}) {
 
       // Get Soniox token
       const token = await getToken();
+      console.log('[Soniox] Got token:', token ? `${token.slice(0, 10)}...` : 'MISSING');
 
       // Create WebSocket connection
+      console.log('[Soniox] Connecting to:', SONIOX_WS_URL);
       const ws = new WebSocket(SONIOX_WS_URL);
       wsRef.current = ws;
 
       ws.onopen = () => {
         updateStatus('connected');
+        console.log('[Soniox] WebSocket connected, sending config...');
 
-        // Send configuration
-        ws.send(JSON.stringify({
+        // Send configuration per Soniox API docs
+        const config = {
           api_key: token,
           model: 'stt-rt-preview',
           language_hints: languageHints,
@@ -269,7 +272,9 @@ export function useSonioxStream(options: UseSonioxStreamOptions = {}) {
           audio_format: 's16le',
           sample_rate: 16000,
           num_channels: 1,
-        }));
+        };
+        console.log('[Soniox] Config:', config);
+        ws.send(JSON.stringify(config));
 
         // Start audio processing
         const audioContext = new AudioContext({ sampleRate: 48000 });
@@ -279,12 +284,17 @@ export function useSonioxStream(options: UseSonioxStreamOptions = {}) {
         const processor = audioContext.createScriptProcessor(4096, 1, 1);
         processorRef.current = processor;
 
+        let audioChunkCount = 0;
         processor.onaudioprocess = (e) => {
           if (ws.readyState === WebSocket.OPEN) {
             const inputData = e.inputBuffer.getChannelData(0);
             const downsampled = downsampleBuffer(inputData, 48000, 16000);
             const pcmData = floatTo16BitPCM(downsampled);
             ws.send(pcmData);
+            audioChunkCount++;
+            if (audioChunkCount % 50 === 0) {
+              console.log('[Soniox] Audio chunks sent:', audioChunkCount);
+            }
           }
         };
 
@@ -297,22 +307,30 @@ export function useSonioxStream(options: UseSonioxStreamOptions = {}) {
       };
 
       ws.onmessage = (event) => {
+        console.log('[Soniox] Raw message:', event.data);
         try {
           const data = JSON.parse(event.data);
+          console.log('[Soniox] Parsed message:', data);
 
           if (data.error) {
+            console.error('[Soniox] Error in message:', data.error);
             onError?.(data.error);
             updateStatus('error');
             return;
           }
 
-          if (data.tokens && data.tokens.length > 0) {
-            const words: TranscriptWord[] = data.tokens.map((token: any) => ({
-              text: token.text,
-              startTime: token.start_ms / 1000,
-              endTime: token.end_ms / 1000,
+          // Soniox API can return tokens in different formats
+          // Check for 'tokens', 'words', or 'result' fields
+          const tokens = data.tokens || data.words || data.result?.words || [];
+
+          if (tokens.length > 0) {
+            console.log('[Soniox] Tokens received:', tokens.length);
+            const words: TranscriptWord[] = tokens.map((token: any) => ({
+              text: token.text || token.word || '',
+              startTime: (token.start_ms || token.start || 0) / 1000,
+              endTime: (token.end_ms || token.end || 0) / 1000,
               confidence: token.confidence || 1,
-              isFinal: token.is_final,
+              isFinal: token.is_final ?? data.is_final ?? false,
               speaker: token.speaker,
             }));
 
@@ -324,6 +342,8 @@ export function useSonioxStream(options: UseSonioxStreamOptions = {}) {
 
             // Build transcript
             const text = words.map(w => w.text).join('');
+            console.log('[Soniox] Text:', text, 'Final:', data.is_final);
+
             if (data.is_final) {
               // Final result - add to permanent transcript
               setTranscript(prev => prev + text + ' ');
@@ -334,19 +354,30 @@ export function useSonioxStream(options: UseSonioxStreamOptions = {}) {
             }
 
             onTranscript?.(words, data.is_final);
+          } else if (data.transcript || data.text) {
+            // Some APIs return plain text directly
+            const text = data.transcript || data.text;
+            console.log('[Soniox] Plain text received:', text);
+            if (data.is_final) {
+              setTranscript(prev => prev + text + ' ');
+              setInterimText('');
+            } else {
+              setInterimText(text);
+            }
           }
         } catch (e) {
-          console.error('Failed to parse Soniox message:', e);
+          console.error('[Soniox] Failed to parse message:', e, event.data);
         }
       };
 
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('[Soniox] WebSocket error:', error);
         onError?.('WebSocket connection error');
         updateStatus('error');
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
+        console.log('[Soniox] WebSocket closed:', event.code, event.reason);
         if (status === 'streaming') {
           updateStatus('stopped');
         }
