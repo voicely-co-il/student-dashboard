@@ -265,27 +265,17 @@ export function useSonioxStream(options: UseSonioxStreamOptions = {}) {
         console.log('[Soniox] WebSocket connected, sending config...');
 
         // Send configuration per Soniox API docs
-        // See: https://soniox.com/docs/stt/api-reference/websocket-api
+        // See: https://soniox.com/docs/stt/rt/real-time-transcription
         const config = {
           api_key: token,
-          model: 'stt-rt-preview',
-          // Audio format settings (required for raw PCM)
-          audio_format: 'pcm_s16le',
-          sample_rate: 16000,
-          num_channels: 1,
-          // Language and features
+          model: 'stt-rt-v3',  // Use v3 model (stable)
+          // Audio format - "auto" for automatic detection
+          audio_format: 'auto',
+          // Language hints for Hebrew and English
           language_hints: languageHints,
+          // Enable features
           enable_speaker_diarization: enableSpeakerDiarization,
-          // Context for better recognition of vocal terms
-          context: {
-            terms: [
-              { term: 'שירה' },
-              { term: 'נשימה' },
-              { term: 'תמיכה' },
-              { term: 'רזוננס' },
-              { term: 'טווח קולי' },
-            ]
-          }
+          enable_endpoint_detection: true,
         };
         console.log('[Soniox] Config:', config);
         ws.send(JSON.stringify(config));
