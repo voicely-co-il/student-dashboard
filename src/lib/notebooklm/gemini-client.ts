@@ -45,13 +45,11 @@ class GeminiClient {
   private apiKey: string;
 
   constructor(config: GeminiClientConfig = {}) {
-    // Try multiple env var names for flexibility
-    this.apiKey = config.apiKey ||
-      import.meta.env.VITE_GEMINI_API_KEY ||
-      import.meta.env.GEMINI_API_KEY ||
-      "";
+    // API key must be provided explicitly - never from frontend env vars for security
+    // Use Local MCP server instead, or pass key from a secure backend
+    this.apiKey = config.apiKey || "";
     if (!this.apiKey) {
-      console.warn("GeminiClient: No API key provided. Set VITE_GEMINI_API_KEY or GEMINI_API_KEY");
+      console.warn("GeminiClient: No API key provided. Use Local MCP server or configure key securely via backend.");
     }
   }
 

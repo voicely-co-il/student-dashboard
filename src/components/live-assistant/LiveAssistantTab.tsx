@@ -82,54 +82,77 @@ export function LiveAssistantTab() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch current/upcoming lesson from calendar
-  const { data: currentLesson } = useQuery({
+  // Fetch current/upcoming lesson from calendar - auto-detect like Timeless
+  const { data: currentLesson, isLoading: calendarLoading } = useQuery({
     queryKey: ['current-lesson-for-live-assistant'],
     queryFn: async () => {
-      // Try to get lesson from google calendar via edge function
+      console.log('[LiveAssistant] Checking Google Calendar...');
       try {
-        const { data, error } = await supabase.functions.invoke('google-calendar-events', {
-          body: { action: 'list', maxResults: 5 },
-        });
+        const { data, error } = await supabase.functions.invoke('google-calendar-events');
 
-        if (error || !data?.events) return null;
-
-        const now = new Date();
-        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-        const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
-
-        // Find event happening now or starting soon
-        const currentEvent = data.events.find((event: any) => {
-          const start = new Date(event.start?.dateTime || event.start?.date);
-          const end = new Date(event.end?.dateTime || event.end?.date);
-          return start <= thirtyMinutesFromNow && end >= fiveMinutesAgo;
-        });
-
-        if (!currentEvent) return null;
-
-        // Try to match student name from event title
-        const eventTitle = currentEvent.summary || '';
-        const matchedStudent = students.find(s =>
-          eventTitle.includes(s.name) || (s.email && eventTitle.includes(s.email))
-        );
-
-        if (matchedStudent) {
-          return {
-            id: currentEvent.id,
-            student_id: matchedStudent.id,
-            student_name: matchedStudent.name,
-            start_time: new Date(currentEvent.start?.dateTime || currentEvent.start?.date),
-            end_time: new Date(currentEvent.end?.dateTime || currentEvent.end?.date),
-          } as ScheduledLesson;
+        if (error) {
+          console.error('[LiveAssistant] Calendar error:', error);
+          return null;
         }
 
-        return null;
-      } catch {
+        console.log('[LiveAssistant] Calendar response:', data);
+
+        // The API returns todayEvents and nextLesson
+        const now = new Date();
+        const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+        const thirtyMinutesFromNow = new Date(now.getTime() + 30 * 60 * 1000);
+
+        // Check all today's events to find one happening now or soon
+        const relevantEvent = data?.todayEvents?.find((event: any) => {
+          const start = new Date(event.start);
+          const end = new Date(event.end);
+          // Event is happening now OR starting within 30 minutes
+          return (start <= thirtyMinutesFromNow && end >= tenMinutesAgo);
+        }) || data?.nextLesson;
+
+        if (!relevantEvent) {
+          console.log('[LiveAssistant] No current/upcoming lesson found');
+          return null;
+        }
+
+        console.log('[LiveAssistant] Found event:', relevantEvent.title);
+
+        // Extract student name from event title
+        // Common formats: "שיעור - שם תלמיד", "שם תלמיד - שיעור", "1:1 שם תלמיד"
+        const eventTitle = relevantEvent.title || '';
+        let studentName = eventTitle
+          .replace(/שיעור/g, '')
+          .replace(/1:1/g, '')
+          .replace(/שיעור ניסיון/g, '')
+          .replace(/[-–]/g, ' ')
+          .trim();
+
+        // Try to match with known students
+        const matchedStudent = students.find(s => {
+          const sName = s.name.toLowerCase();
+          const eName = studentName.toLowerCase();
+          return eName.includes(sName) || sName.includes(eName) ||
+                 eventTitle.toLowerCase().includes(sName);
+        });
+
+        const result = {
+          id: relevantEvent.id,
+          student_id: matchedStudent?.id || `calendar:${studentName}`,
+          student_name: matchedStudent?.name || studentName,
+          start_time: new Date(relevantEvent.start),
+          end_time: new Date(relevantEvent.end),
+          calendarName: relevantEvent.calendarName,
+        } as ScheduledLesson & { calendarName?: string };
+
+        console.log('[LiveAssistant] Detected lesson:', result);
+        return result;
+      } catch (e) {
+        console.error('[LiveAssistant] Calendar fetch error:', e);
         return null;
       }
     },
-    enabled: students.length > 0,
-    refetchInterval: 60000, // Check every minute
+    staleTime: 30 * 1000, // Recheck every 30 seconds
+    refetchInterval: 60 * 1000, // Refresh every minute
   });
 
   // Auto-select student from current lesson
@@ -153,13 +176,20 @@ export function LiveAssistantTab() {
     );
   }, [students, searchQuery]);
 
-  // Get selected student info (handles both DB students and manual entries)
+  // Get selected student info (handles DB students, manual entries, and calendar-detected)
   const selectedStudent = useMemo(() => {
     if (!selectedStudentId) return null;
     if (selectedStudentId.startsWith('manual:')) {
       return {
         id: selectedStudentId,
         name: selectedStudentId.replace('manual:', ''),
+        email: undefined,
+      } as Student;
+    }
+    if (selectedStudentId.startsWith('calendar:')) {
+      return {
+        id: selectedStudentId,
+        name: selectedStudentId.replace('calendar:', ''),
         email: undefined,
       } as Student;
     }
@@ -417,19 +447,34 @@ export function LiveAssistantTab() {
             </div>
           )}
 
-          {/* Current lesson indicator */}
-          {currentLesson && (
-            <div className="mt-3 p-2 bg-green-50 dark:bg-green-950 rounded-md flex items-center gap-2 text-sm">
+          {/* Calendar sync status - loading */}
+          {calendarLoading && (
+            <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950 rounded-md flex items-center gap-2 text-sm animate-pulse">
+              <Calendar className="h-4 w-4 text-blue-500" />
+              <span className="text-blue-600 dark:text-blue-400">בודק יומן Google...</span>
+            </div>
+          )}
+
+          {/* Current lesson indicator - auto-detected from calendar */}
+          {currentLesson && !calendarLoading && (
+            <div className="mt-3 p-2 bg-green-50 dark:bg-green-950 rounded-md flex items-center gap-2 text-sm border border-green-200 dark:border-green-800">
               <Calendar className="h-4 w-4 text-green-600" />
-              <span className="text-green-700 dark:text-green-300">
-                שיעור מתוכנן עכשיו: <strong>{currentLesson.student_name}</strong>
-              </span>
+              <div className="flex-1">
+                <span className="text-green-700 dark:text-green-300">
+                  🎯 זוהה מהיומן: <strong>{currentLesson.student_name}</strong>
+                </span>
+                {currentLesson.calendarName && (
+                  <span className="text-green-600 dark:text-green-400 text-xs mr-2">
+                    ({currentLesson.calendarName})
+                  </span>
+                )}
+              </div>
               {selectedStudentId !== currentLesson.student_id && (
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                   onClick={() => setSelectedStudentId(currentLesson.student_id)}
-                  className="mr-auto text-xs"
+                  className="text-xs border-green-300"
                 >
                   בחר
                 </Button>
