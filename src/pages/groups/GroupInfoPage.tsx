@@ -13,8 +13,6 @@ import {
   Clock,
   MapPin,
   User,
-  Crown,
-  Medal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useGroupStudent } from '@/hooks/groups';
@@ -154,7 +152,6 @@ export default function GroupInfoPage() {
   const group = DEMO_GROUP;
   const members = DEMO_MEMBERS;
 
-  const myRank = members.find(m => m.id === currentStudentId)?.rank || 0;
 
   return (
     <StudentLayout>
@@ -258,98 +255,109 @@ export default function GroupInfoPage() {
           </CardContent>
         </Card>
 
-        {/* Members Leaderboard */}
+        {/* Group Goal Progress */}
         <Card className="bg-card border border-border">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-lg text-foreground">
               <Trophy className="h-5 w-5 text-voicely-warning" />
-              חברי הקבוצה
+              יעד קבוצתי
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {members.map((member) => {
-              const isMe = member.id === currentStudentId;
-              const isTopThree = member.rank <= 3;
-
-              return (
-                <div
-                  key={member.id}
-                  className={cn(
-                    'flex items-center gap-3 p-3 rounded-xl transition-all',
-                    isMe ? 'bg-secondary border border-primary/20' : 'bg-muted'
-                  )}
-                >
-                  {/* Rank */}
-                  <div className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
-                    member.rank === 1 && 'bg-yellow-100',
-                    member.rank === 2 && 'bg-gray-200',
-                    member.rank === 3 && 'bg-orange-100',
-                    member.rank > 3 && 'bg-card border border-border'
-                  )}>
-                    {isTopThree ? (
-                      <span className="text-lg">{getRankEmoji(member.rank)}</span>
-                    ) : (
-                      <span className="text-sm font-bold text-muted-foreground">{member.rank}</span>
-                    )}
-                  </div>
-
-                  {/* Avatar & Name */}
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <span className="text-xl">{member.avatar_emoji}</span>
-                    <div className="min-w-0">
-                      <p className={cn(
-                        'font-medium truncate',
-                        isMe ? 'text-primary' : 'text-foreground'
-                      )}>
-                        {member.student_name}
-                        {isMe && <span className="text-primary"> (את/ה)</span>}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-0.5">
-                          <Flame className="h-3 w-3 text-accent" />
-                          {member.current_streak}
-                        </span>
-                        <span>רמה {member.current_level}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* XP */}
-                  <div className="text-left">
-                    <p className={cn(
-                      'font-bold',
-                      isTopThree ? 'text-primary' : 'text-foreground'
-                    )}>
-                      {member.total_xp}
-                    </p>
-                    <p className="text-xs text-muted-foreground">XP</p>
-                  </div>
+          <CardContent className="space-y-4">
+            {/* Current Group Goal */}
+            <div className="bg-gradient-brand rounded-xl p-4 text-white">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="text-3xl">🎯</span>
+                <div>
+                  <p className="font-semibold text-white">10 שירים מושרים החודש</p>
+                  <p className="text-sm text-white/80">כל הקבוצה יחד!</p>
                 </div>
-              );
-            })}
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm text-white/90">
+                  <span>7 מתוך 10 שירים</span>
+                  <span>70%</span>
+                </div>
+                <Progress value={70} className="h-3 bg-white/20" />
+              </div>
+              <p className="text-sm text-white/80 mt-3 text-center">
+                עוד 3 שירים ומגיעים ליעד! 🎉
+              </p>
+            </div>
+
+            {/* Group Achievements */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-foreground">הישגים משותפים</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className="text-2xl">🎵</span>
+                  <p className="text-xs text-muted-foreground mt-1">50 שירים</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className="text-2xl">🔥</span>
+                  <p className="text-xs text-muted-foreground mt-1">שבוע רצוף</p>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center opacity-40">
+                  <span className="text-2xl">⭐</span>
+                  <p className="text-xs text-muted-foreground mt-1">100 שירים</p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* My Position */}
-        {myRank > 0 && (
-          <Card className="bg-secondary border border-primary/20">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-primary font-medium">המיקום שלך בקבוצה</p>
-                  <p className="text-3xl font-bold text-primary">#{myRank}</p>
-                </div>
-                <div className="text-4xl">{getRankEmoji(myRank)}</div>
+        {/* Team Members */}
+        <Card className="bg-card border border-border">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+              <Users className="h-5 w-5 text-primary" />
+              חברי הקבוצה
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3 justify-center">
+              {members.map((member) => {
+                const isMe = member.id === currentStudentId;
+                return (
+                  <div
+                    key={member.id}
+                    className={cn(
+                      'flex flex-col items-center p-3 rounded-xl transition-all min-w-[80px]',
+                      isMe ? 'bg-secondary border border-primary/20' : 'bg-muted'
+                    )}
+                  >
+                    <span className="text-3xl mb-1">{member.avatar_emoji}</span>
+                    <p className={cn(
+                      'text-sm font-medium text-center',
+                      isMe ? 'text-primary' : 'text-foreground'
+                    )}>
+                      {member.student_name}
+                      {isMe && ' ⭐'}
+                    </p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Flame className="h-3 w-3 text-accent" />
+                      <span className="text-xs text-muted-foreground">{member.current_streak} ימים</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* My Contribution */}
+        <Card className="bg-secondary border border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <span className="text-4xl">{members.find(m => m.id === currentStudentId)?.avatar_emoji || '🌟'}</span>
+              <div className="flex-1">
+                <p className="text-sm text-primary font-medium">התרומה שלך השבוע</p>
+                <p className="text-2xl font-bold text-foreground">2 שירים</p>
+                <p className="text-sm text-muted-foreground">כל שיר עוזר לקבוצה!</p>
               </div>
-              {myRank > 1 && (
-                <p className="text-sm text-primary mt-2">
-                  עוד {members[myRank - 2].total_xp - (members.find(m => m.id === currentStudentId)?.total_xp || 0)} XP למקום {myRank - 1}!
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Encouragement */}
         <Card className="bg-gradient-coral text-white">
@@ -357,7 +365,7 @@ export default function GroupInfoPage() {
             <span className="text-4xl">💪</span>
             <p className="font-semibold text-white mt-2">יחד אנחנו חזקים!</p>
             <p className="text-sm text-white/80 mt-1">
-              תמשיכו לתרגל ולצבור XP לקבוצה
+              כל אחד תורם להצלחת הקבוצה
             </p>
           </CardContent>
         </Card>
@@ -366,15 +374,3 @@ export default function GroupInfoPage() {
   );
 }
 
-// =====================================================
-// HELPERS
-// =====================================================
-
-function getRankEmoji(rank: number): string {
-  switch (rank) {
-    case 1: return '🥇';
-    case 2: return '🥈';
-    case 3: return '🥉';
-    default: return '🏅';
-  }
-}

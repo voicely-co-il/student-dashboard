@@ -40,62 +40,34 @@ export function LiveAssistantTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
-  // Fetch students list - join profiles with user_roles to get students only
-  const { data: students = [] } = useQuery({
-    queryKey: ['students-for-live-assistant'],
+  // Fetch students list from Notion CRM (active students only)
+  const { data: students = [], isLoading: studentsLoading } = useQuery({
+    queryKey: ['students-for-live-assistant-crm'],
     queryFn: async () => {
-      // Get user IDs with student role
-      const { data: studentRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'student')
-        .eq('is_active', true);
+      // Get students from Notion CRM via Edge Function
+      const { data, error } = await supabase.functions.invoke('notion-crm-students');
 
-      if (rolesError) {
-        console.error('Error fetching student roles:', rolesError);
-        // Fallback: get all profiles if roles table fails
-        const { data: allProfiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, username')
-          .order('full_name');
-
-        return (allProfiles || []).map(s => ({
-          id: s.id,
-          name: s.full_name || s.username || 'ללא שם',
-          email: s.username,
-        })) as Student[];
+      if (error) {
+        console.error('Error fetching CRM students:', error);
+        return [] as Student[];
       }
 
-      const studentIds = studentRoles?.map(r => r.user_id) || [];
-
-      if (studentIds.length === 0) {
-        // No students found, get all profiles as fallback
-        const { data: allProfiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, username')
-          .order('full_name');
-
-        return (allProfiles || []).map(s => ({
-          id: s.id,
-          name: s.full_name || s.username || 'ללא שם',
-          email: s.username,
-        })) as Student[];
+      if (!data?.students) {
+        console.log('No students returned from CRM');
+        return [] as Student[];
       }
 
-      // Get profiles for students
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, username')
-        .in('id', studentIds)
-        .order('full_name');
-
-      if (error) throw error;
-      return (data || []).map(s => ({
-        id: s.id,
-        name: s.full_name || s.username || 'ללא שם',
-        email: s.username,
-      })) as Student[];
+      // Map CRM students to our Student interface
+      // Filter to only active students for the dropdown
+      return data.students
+        .filter((s: any) => s.isActive)
+        .map((s: any) => ({
+          id: s.id, // Notion page ID
+          name: s.name,
+          email: s.email || s.phone || undefined,
+        })) as Student[];
     },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Fetch current/upcoming lesson from calendar
@@ -355,16 +327,20 @@ export function LiveAssistantTab() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Dropdown - with portal for proper z-index in modals */}
-            {students.length > 0 ? (
+            {/* Dropdown - students from Notion CRM */}
+            {studentsLoading ? (
+              <div className="flex-1 text-sm text-muted-foreground p-2 border rounded-md animate-pulse">
+                טוען תלמידים מ-CRM...
+              </div>
+            ) : students.length > 0 ? (
               <Select
                 value={selectedStudentId || ''}
                 onValueChange={(value) => setSelectedStudentId(value || null)}
               >
                 <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="בחר תלמיד מהרשימה..." />
+                  <SelectValue placeholder={`בחר תלמיד (${students.length} פעילים)...`} />
                 </SelectTrigger>
-                <SelectContent position="popper" className="z-[9999]">
+                <SelectContent position="popper" className="z-[9999] max-h-[300px]">
                   {students.map((student) => (
                     <SelectItem key={student.id} value={student.id}>
                       <div className="flex items-center gap-2">
@@ -377,7 +353,7 @@ export function LiveAssistantTab() {
               </Select>
             ) : (
               <div className="flex-1 text-sm text-muted-foreground p-2 border rounded-md">
-                אין תלמידים במערכת
+                לא נמצאו תלמידים פעילים ב-CRM
               </div>
             )}
 
