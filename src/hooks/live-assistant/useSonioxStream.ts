@@ -40,7 +40,8 @@ const DAILY_USAGE_KEY = 'voicely_live_assistant_daily_usage';
 
 type StreamStatus = 'idle' | 'connecting' | 'connected' | 'streaming' | 'error' | 'stopped';
 
-const SONIOX_WS_URL = 'wss://api.soniox.com/transcribe-websocket';
+// Correct Soniox real-time WebSocket URL (not api.soniox.com!)
+const SONIOX_WS_URL = 'wss://stt-rt.soniox.com/transcribe-websocket';
 
 // Helper to get/set daily usage from localStorage
 function getDailyUsage(): { date: string; seconds: number } {
@@ -268,12 +269,21 @@ export function useSonioxStream(options: UseSonioxStreamOptions = {}) {
         const config = {
           api_key: token,
           model: 'stt-rt-preview',
+          // Audio format settings (required for raw PCM)
+          audio_format: 'pcm_s16le',
+          sample_rate: 16000,
+          num_channels: 1,
+          // Language and features
           language_hints: languageHints,
-          enable_streaming_speaker_diarization: enableSpeakerDiarization,
-          include_nonfinal: true, // Get interim results
-          speech_context: {
-            entries: [
-              { phrases: ['שירה', 'קול', 'נשימה', 'תמיכה', 'רזוננס', 'טווח', 'גבוה', 'נמוך'] }
+          enable_speaker_diarization: enableSpeakerDiarization,
+          // Context for better recognition of vocal terms
+          context: {
+            terms: [
+              { term: 'שירה' },
+              { term: 'נשימה' },
+              { term: 'תמיכה' },
+              { term: 'רזוננס' },
+              { term: 'טווח קולי' },
             ]
           }
         };

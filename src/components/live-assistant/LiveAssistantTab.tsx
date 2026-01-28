@@ -88,7 +88,10 @@ export function LiveAssistantTab() {
     queryFn: async () => {
       console.log('[LiveAssistant] Checking Google Calendar...');
       try {
-        const { data, error } = await supabase.functions.invoke('google-calendar-events');
+        // Use GET method - the Edge Function expects GET or POST with body
+        const { data, error } = await supabase.functions.invoke('google-calendar-events', {
+          method: 'GET',
+        });
 
         if (error) {
           console.error('[LiveAssistant] Calendar error:', error);
