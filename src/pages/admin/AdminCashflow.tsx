@@ -215,8 +215,8 @@ export default function AdminCashflow() {
           </TabsContent>
         </Tabs>
 
-        {/* Business Insights Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Insights Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
           <BusinessInsights
             vatRate={vatRate}
             incomeTaxRate={incomeTaxRate}

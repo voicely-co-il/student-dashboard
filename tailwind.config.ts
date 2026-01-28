@@ -57,13 +57,15 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
         voicely: {
-          green: 'hsl(var(--voicely-green))',
-          mint: 'hsl(var(--voicely-mint))',
-          yellow: 'hsl(var(--voicely-yellow))',
-          red: 'hsl(var(--voicely-red))',
-          orange: 'hsl(var(--voicely-orange))',
+          purple: 'hsl(var(--voicely-purple))',
+          'purple-light': 'hsl(var(--voicely-purple-light))',
           coral: 'hsl(var(--voicely-coral))',
+          red: 'hsl(var(--voicely-red))',
           charcoal: 'hsl(var(--voicely-charcoal))',
+          success: 'hsl(var(--voicely-success))',
+          warning: 'hsl(var(--voicely-warning))',
+          error: 'hsl(var(--voicely-error))',
+          info: 'hsl(var(--voicely-info))',
         }
 			},
 			borderRadius: {

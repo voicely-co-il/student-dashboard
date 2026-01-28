@@ -19,6 +19,8 @@ import StudentDetail from "./pages/teacher/StudentDetail";
 import TeacherSearch from "./pages/teacher/TeacherSearch";
 import TeacherSchedule from "./pages/teacher/TeacherSchedule";
 import TeacherChat from "./pages/TeacherChat";
+// LiveAssistant moved to AI Lab for beta testing
+// import LiveAssistant from "./pages/teacher/LiveAssistant";
 import ChatPage from "./pages/ChatPage";
 import LiveChat from "./pages/LiveChat";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
@@ -188,6 +190,11 @@ const App = () => (
                   </AdminLayout>
                 </TeacherProtectedRoute>
               }
+            />
+            {/* Live Assistant - moved to /admin/ai-lab for beta testing */}
+            <Route
+              path="/teacher/live-assistant"
+              element={<Navigate to="/admin/ai-lab" replace />}
             />
 
             {/* ===================== */}

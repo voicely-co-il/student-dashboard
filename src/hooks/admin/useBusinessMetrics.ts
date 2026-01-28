@@ -25,44 +25,48 @@ export function useBusinessMetrics() {
         .gte("lesson_date", fourWeeksAgo.toISOString())
         .order("lesson_date", { ascending: false });
 
-      // Get cashflow entries (last 4 weeks)
+      // Get settings for pricing
+      const { data: settingsData } = await supabase
+        .from("cashflow_settings")
+        .select("setting_key, setting_value");
+
+      const settings: Record<string, string> = {};
+      settingsData?.forEach((s: { setting_key: string; setting_value: string }) => {
+        settings[s.setting_key] = s.setting_value;
+      });
+
+      const price1on1 = parseFloat(settings.price_1on1_new || "200");
+      const priceVeteran = parseFloat(settings.price_1on1_veteran || "180");
+      const avgLessonPrice = (price1on1 + priceVeteran) / 2; // Simple average
+
+      // Get cashflow expenses (last 4 weeks)
       const { data: entries } = await supabase
         .from("cashflow_entries")
         .select("amount, category_id, period_start")
         .eq("period_type", "weekly")
         .order("period_start", { ascending: false })
-        .limit(8); // 4 weeks * 2 (income + expense)
+        .limit(50);
 
-      // Get income categories
+      // Get expense categories
       const { data: categories } = await supabase
         .from("cashflow_categories")
         .select("id, type");
 
-      const incomeIds = categories?.filter(c => c.type === "income").map(c => c.id) || [];
       const expenseIds = categories?.filter(c => c.type === "expense" || c.type === "other_expense").map(c => c.id) || [];
 
-      // Calculate weekly income/expenses
-      const weeklyData = new Map<string, { income: number; expenses: number }>();
-
+      // Calculate weekly expenses from cashflow
+      const weeklyExpensesMap = new Map<string, number>();
       entries?.forEach(entry => {
-        const week = entry.period_start;
-        if (!weeklyData.has(week)) {
-          weeklyData.set(week, { income: 0, expenses: 0 });
-        }
-        const data = weeklyData.get(week)!;
-        if (incomeIds.includes(entry.category_id)) {
-          data.income += Number(entry.amount);
-        } else if (expenseIds.includes(entry.category_id)) {
-          data.expenses += Number(entry.amount);
+        if (expenseIds.includes(entry.category_id)) {
+          const week = entry.period_start;
+          weeklyExpensesMap.set(week, (weeklyExpensesMap.get(week) || 0) + Number(entry.amount));
         }
       });
 
-      const weeks = Array.from(weeklyData.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-      const currentWeek = weeks[0];
-      const lastWeek = weeks[1];
+      // Count lessons per week from transcripts
+      const lessonsByWeek = new Map<string, number>();
+      const uniqueStudents = new Set<string>();
 
-      // Count lessons per week
-      const lessonsByWeek = new Map<string, Set<string>>();
       transcripts?.forEach(t => {
         const date = new Date(t.lesson_date || t.created_at);
         const day = date.getDay();
@@ -70,49 +74,41 @@ export function useBusinessMetrics() {
         date.setDate(date.getDate() + diff);
         const weekKey = date.toISOString().split("T")[0];
 
-        if (!lessonsByWeek.has(weekKey)) {
-          lessonsByWeek.set(weekKey, new Set());
-        }
-        if (t.student_name) {
-          lessonsByWeek.get(weekKey)!.add(t.student_name);
-        }
+        lessonsByWeek.set(weekKey, (lessonsByWeek.get(weekKey) || 0) + 1);
+        if (t.student_name) uniqueStudents.add(t.student_name);
       });
 
       // Calculate averages
       const totalLessons = transcripts?.length || 0;
-      const weeksCount = lessonsByWeek.size || 1;
-      const lessonsPerWeek = totalLessons / weeksCount;
+      const weeksWithLessons = lessonsByWeek.size || 1;
+      const lessonsPerWeek = totalLessons / weeksWithLessons;
 
-      // Unique students
-      const uniqueStudents = new Set<string>();
-      transcripts?.forEach(t => {
-        if (t.student_name) uniqueStudents.add(t.student_name);
-      });
+      // Calculate income from lessons (lessons * price)
+      const weeklyIncome = lessonsPerWeek * avgLessonPrice;
 
-      // Average income
-      const totalIncome = weeks.reduce((sum, [_, data]) => sum + data.income, 0);
-      const totalExpenses = weeks.reduce((sum, [_, data]) => sum + data.expenses, 0);
-      const avgWeeklyIncome = totalIncome / (weeks.length || 1);
-      const avgWeeklyExpenses = totalExpenses / (weeks.length || 1);
-
-      // Calculate trends
-      const weeklyTrend = currentWeek && lastWeek
-        ? ((currentWeek[1].income - lastWeek[1].income) / lastWeek[1].income) * 100
+      // Calculate average weekly expenses
+      const expenseValues = Array.from(weeklyExpensesMap.values());
+      const avgWeeklyExpenses = expenseValues.length > 0
+        ? expenseValues.reduce((a, b) => a + b, 0) / expenseValues.length
         : 0;
 
-      const currentWeekLessons = lessonsByWeek.get(currentWeek?.[0] || "")?.size || 0;
-      const lastWeekKey = Array.from(lessonsByWeek.keys()).sort().reverse()[1] || "";
-      const lastWeekLessons = lessonsByWeek.get(lastWeekKey)?.size || 1;
-      const lessonsTrend = ((currentWeekLessons - lastWeekLessons) / lastWeekLessons) * 100;
+      // Trends (comparing this week to last)
+      const sortedWeeks = Array.from(lessonsByWeek.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+      const thisWeekLessons = sortedWeeks[0]?.[1] || 0;
+      const lastWeekLessons = sortedWeeks[1]?.[1] || 1;
+      const lessonsTrend = ((thisWeekLessons - lastWeekLessons) / lastWeekLessons) * 100;
 
-      // Average price per lesson
-      const avgPricePerLesson = totalLessons > 0 ? totalIncome / totalLessons : 195;
+      const thisWeekIncome = thisWeekLessons * avgLessonPrice;
+      const lastWeekIncome = lastWeekLessons * avgLessonPrice;
+      const weeklyTrend = lastWeekIncome > 0
+        ? ((thisWeekIncome - lastWeekIncome) / lastWeekIncome) * 100
+        : 0;
 
       return {
-        weeklyIncome: avgWeeklyIncome,
+        weeklyIncome,
         weeklyExpenses: avgWeeklyExpenses,
         lessonsPerWeek: Math.round(lessonsPerWeek),
-        avgPricePerLesson: Math.round(avgPricePerLesson),
+        avgPricePerLesson: Math.round(avgLessonPrice),
         studentCount: uniqueStudents.size,
         weeklyTrend: Math.round(weeklyTrend),
         lessonsTrend: Math.round(lessonsTrend),

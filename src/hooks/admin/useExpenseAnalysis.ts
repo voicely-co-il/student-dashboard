@@ -10,6 +10,11 @@ export interface Recommendation {
   action: string;
 }
 
+export interface Expense {
+  name: string;
+  monthlyCost: number;
+}
+
 export interface ExpenseAnalysis {
   summary: {
     monthlyIncome: number;
@@ -19,7 +24,8 @@ export interface ExpenseAnalysis {
   };
   recommendations: Recommendation[];
   totalPotentialSaving: number;
-  top5Expenses: { name: string; monthlyCost: number }[];
+  top5Expenses: Expense[];
+  allExpenses: Expense[];
   expenseCount: number;
 }
 

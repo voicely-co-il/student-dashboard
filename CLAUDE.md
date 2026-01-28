@@ -10,6 +10,53 @@
 - **Backend:** Supabase (Auth, Database, Storage)
 - **Deployment:** Vercel
 
+---
+
+## Design System (MANDATORY)
+
+**Reference:** `src/styles/design-system.md`
+
+### Brand Colors (from voicely.co.il)
+| Color | Hex | CSS Variable | Tailwind Class |
+|-------|-----|--------------|----------------|
+| Purple (Primary) | `#391E59` | `--primary` | `bg-primary`, `text-primary` |
+| Coral (Accent) | `#ED4A69` | `--accent` | `bg-accent`, `text-accent` |
+| Charcoal (Text) | `#111111` | `--foreground` | `text-foreground` |
+
+### CRITICAL RULES - MUST FOLLOW
+
+1. **Text on light backgrounds:** Use `text-foreground` (charcoal) - NEVER light colors
+2. **Text on dark/gradient backgrounds:** Use `text-white`
+3. **Section headers:** Use `text-foreground font-semibold` - NEVER muted colors
+4. **Muted text only for:** Descriptions, timestamps, secondary info
+5. **Gradients:** Use `bg-gradient-brand` for hero sections, NOT random colors
+
+### Quick Reference Classes
+```tsx
+// Primary text (dark, readable)
+<h2 className="text-foreground font-semibold">Title</h2>
+
+// Secondary text
+<p className="text-muted-foreground">Description</p>
+
+// Text on gradient/purple background
+<div className="bg-gradient-brand">
+  <h3 className="text-white">Title</h3>
+  <p className="text-white/80">Subtitle</p>
+</div>
+
+// Cards
+<Card className="bg-card border border-border">
+  <CardTitle className="text-foreground">...</CardTitle>
+</Card>
+```
+
+### DO NOT
+- Use light purple/pink text on white backgrounds
+- Use `text-purple-300`, `text-pink-200` or similar light colors for text
+- Create new color variables without updating design-system.md
+- Mix green theme with purple theme
+
 ## Supabase Project (Production)
 - **Project ID:** jldfxkbczzxawdqsznze
 - **URL:** https://jldfxkbczzxawdqsznze.supabase.co
@@ -159,6 +206,26 @@ Google Drive (25K+ transcripts)
 - `search-website` - Semantic search in website content (RAG)
 - `generate-lesson-plan` - AI-generated lesson plans based on history
 - `teacher-chat` - AI chat with context from transcripts & website
+
+### Live Teaching Assistant (Planned)
+Real-time AI assistant for teachers during lessons.
+
+**Features:**
+- Live audio transcription during lessons
+- Real-time tips and suggestions
+- Song/exercise recommendations
+- Student history context
+
+**Tech Stack:**
+- **Soniox** - Real-time Hebrew STT (7.5% WER, best for Hebrew)
+- **WebSocket streaming** - Direct browser to Soniox
+- **AI Analysis** - Gemini/Claude for tip generation
+
+**Cost:** ~22₪/month (~$6) based on 50 hours/month usage
+
+**Resources:**
+- [Soniox Web SDK](https://soniox.com/docs/stt/SDKs/web-sdk)
+- [Soniox WebSocket API](https://soniox.com/docs/stt/api-reference/websocket-api)
 
 ### Database Tables (pgvector)
 **Transcripts:**

@@ -1,190 +1,168 @@
-/**
- * Sync Voicely-related expenses from Notion to Supabase cashflow
- *
- * Pulls expenses marked as "כלים של ענבל" from Notion's main expenses table
- * and syncs them to cashflow_entries with proper categorization.
- */
-import { createClient } from '@supabase/supabase-js';
-import 'dotenv/config';
+import "dotenv/config";
+import { createClient } from "@supabase/supabase-js";
 
-// Supabase client with service role for bypassing RLS
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Notion config
 const NOTION_API_KEY = process.env.NOTION_API_KEY!;
-const EXPENSES_DB_ID = 'dd87657b-24e8-4a2a-a262-d71e2306f109';
-
-// All items marked as "כלים של ענבל" are business expenses
+const NOTION_EXPENSES_DB = "dd87657b-24e8-4a2a-a262-d71e2306f109";
 
 interface NotionExpense {
   name: string;
   monthlyCost: number | null;
-  category: string | null;
-  belongsTo: string[];
   isInbalTool: boolean;
 }
 
 async function fetchNotionExpenses(): Promise<NotionExpense[]> {
-  const response = await fetch(
-    `https://api.notion.com/v1/databases/${EXPENSES_DB_ID}/query`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_API_KEY}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        filter: {
-          property: 'כלים של ענבל',
-          checkbox: { equals: true },
+  const expenses: NotionExpense[] = [];
+  let hasMore = true;
+  let startCursor: string | undefined;
+
+  while (hasMore) {
+    const response = await fetch(
+      "https://api.notion.com/v1/databases/" + NOTION_EXPENSES_DB + "/query",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + NOTION_API_KEY,
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json",
         },
-        page_size: 100,
-      }),
+        body: JSON.stringify({
+          filter: {
+            property: "כלים של ענבל",
+            checkbox: { equals: true },
+          },
+          start_cursor: startCursor,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    for (const page of data.results || []) {
+      const props = page.properties;
+      const name = props["שם"]?.title?.[0]?.plain_text || "Unknown";
+      const monthlyCost = props["עלות חודשית ₪"]?.number || null;
+      
+      if (monthlyCost && monthlyCost > 0) {
+        expenses.push({ name, monthlyCost, isInbalTool: true });
+      }
     }
-  );
 
-  const data = await response.json();
-
-  if (data.object === 'error') {
-    throw new Error(`Notion API error: ${data.message}`);
+    hasMore = data.has_more;
+    startCursor = data.next_cursor;
   }
 
-  return data.results.map((page: any) => ({
-    name: page.properties['שם']?.title?.[0]?.plain_text || 'Unknown',
-    monthlyCost: page.properties['עלות חודשית ₪']?.number || null,
-    category: page.properties['קטגוריה']?.select?.name || null,
-    belongsTo: page.properties['?לאן שייך']?.multi_select?.map((s: any) => s.name) || [],
-    isInbalTool: page.properties['כלים של ענבל']?.checkbox || false,
-  }));
+  return expenses;
 }
 
-// All items marked as "כלים של ענבל" are Voicely business expenses
-function isBusinessExpense(expense: NotionExpense): boolean {
-  return expense.isInbalTool && expense.monthlyCost !== null && expense.monthlyCost > 0;
-}
+function getWeeklyPeriods(startDate: Date, count: number): string[] {
+  const periods: string[] = [];
+  const current = new Date(startDate);
 
-async function getOrCreateToolsCategory(): Promise<string> {
-  // Check if "כלים ותוכנות" category exists
-  const { data: existing } = await supabase
-    .from('cashflow_categories')
-    .select('id')
-    .eq('name', 'כלים ותוכנות')
-    .single();
-
-  if (existing) {
-    return existing.id;
+  for (let i = 0; i < count; i++) {
+    periods.push(current.toISOString().split("T")[0]);
+    current.setDate(current.getDate() + 7);
   }
 
-  // Create it
-  const { data: created, error } = await supabase
-    .from('cashflow_categories')
-    .insert({
-      name: 'כלים ותוכנות',
-      type: 'expense',
-      sort_order: 10,
-      is_default: true,
-    })
-    .select('id')
-    .single();
-
-  if (error) {
-    throw new Error(`Failed to create category: ${error.message}`);
-  }
-
-  return created!.id;
-}
-
-async function getCurrentWeekStart(): Promise<string> {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? -6 : 1 - day; // Monday
-  now.setDate(now.getDate() + diff);
-  return now.toISOString().split('T')[0];
-}
-
-async function syncExpensesToCashflow(expenses: NotionExpense[]) {
-  const categoryId = await getOrCreateToolsCategory();
-  const weekStart = await getCurrentWeekStart();
-
-  // Filter all business expenses with costs
-  const voicelyExpenses = expenses.filter(isBusinessExpense);
-
-  console.log('\n📊 הוצאות Voicely מ-Notion:\n');
-
-  let totalMonthly = 0;
-  for (const expense of voicelyExpenses) {
-    console.log(`  • ${expense.name}: ₪${expense.monthlyCost}/חודש`);
-    totalMonthly += expense.monthlyCost!;
-  }
-
-  // Calculate weekly amount (monthly / 4.33)
-  const weeklyTotal = Math.round(totalMonthly / 4.33);
-
-  console.log(`\n  ────────────────────────`);
-  console.log(`  סה"כ חודשי: ₪${totalMonthly.toLocaleString('he-IL')}`);
-  console.log(`  סה"כ שבועי: ₪${weeklyTotal.toLocaleString('he-IL')}`);
-
-  // Create detailed notes
-  const notes = voicelyExpenses
-    .map(e => `${e.name}: ₪${e.monthlyCost}`)
-    .join('\n');
-
-  // Upsert to cashflow_entries for current week
-  const { error } = await supabase
-    .from('cashflow_entries')
-    .upsert({
-      category_id: categoryId,
-      period_type: 'weekly',
-      period_start: weekStart,
-      amount: weeklyTotal,
-      notes: `כלים ותוכנות (מ-Notion):\n${notes}`,
-    }, { onConflict: 'category_id,period_type,period_start' });
-
-  if (error) {
-    console.error('\n❌ שגיאה בעדכון:', error.message);
-  } else {
-    console.log(`\n✅ עודכן בתזרים: ${weekStart} → ₪${weeklyTotal}`);
-  }
-
-  // Also update monthly view
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  const monthStartStr = monthStart.toISOString().split('T')[0];
-
-  const { error: monthError } = await supabase
-    .from('cashflow_entries')
-    .upsert({
-      category_id: categoryId,
-      period_type: 'monthly',
-      period_start: monthStartStr,
-      amount: totalMonthly,
-      notes: `כלים ותוכנות (מ-Notion):\n${notes}`,
-    }, { onConflict: 'category_id,period_type,period_start' });
-
-  if (monthError) {
-    console.error('❌ שגיאה בעדכון חודשי:', monthError.message);
-  } else {
-    console.log(`✅ עודכן חודשי: ${monthStartStr} → ₪${totalMonthly}`);
-  }
+  return periods;
 }
 
 async function main() {
-  console.log('\n🔄 מסנכרן הוצאות מ-Notion...\n');
+  console.log("Fetching expenses from Notion...");
+  const expenses = await fetchNotionExpenses();
 
-  try {
-    const expenses = await fetchNotionExpenses();
-    console.log(`נמצאו ${expenses.length} כלים של ענבל`);
+  const totalMonthly = expenses.reduce((sum, e) => sum + (e.monthlyCost || 0), 0);
+  const weeklyAmount = Math.round(totalMonthly / 4.33);
 
-    await syncExpensesToCashflow(expenses);
+  console.log("Found " + expenses.length + " expenses");
+  console.log("Total monthly: NIS " + totalMonthly);
+  console.log("Weekly amount: NIS " + weeklyAmount);
 
-    console.log('\n✨ סיום!\n');
-  } catch (error) {
-    console.error('❌ שגיאה:', error);
+  // Get the category
+  const { data: category } = await supabase
+    .from("cashflow_categories")
+    .select("id")
+    .eq("name", "כלים ותוכנות")
+    .single();
+
+  if (!category) {
+    console.error("Category not found!");
+    return;
   }
+
+  // Get settings for start date
+  const { data: settings } = await supabase
+    .from("cashflow_settings")
+    .select("setting_key, setting_value")
+    .eq("setting_key", "weekly_start_date")
+    .single();
+
+  const startDateStr = settings?.setting_value || "2025-10-27";
+  const startDate = new Date(startDateStr);
+
+  console.log("\nStart date from settings: " + startDateStr);
+
+  // Get 13 weekly periods
+  const weeklyPeriods = getWeeklyPeriods(startDate, 13);
+
+  console.log("\nSyncing to weekly periods:");
+
+  // Create notes from expenses
+  const notes = expenses.map(e => e.name + ": NIS " + e.monthlyCost).join("\n");
+
+  // Upsert for each weekly period
+  for (const period of weeklyPeriods) {
+    const { error } = await supabase
+      .from("cashflow_entries")
+      .upsert({
+        category_id: category.id,
+        period_type: "weekly",
+        period_start: period,
+        amount: weeklyAmount,
+        notes: "Tools & Software (from Notion):\n" + notes,
+      }, {
+        onConflict: "category_id,period_type,period_start",
+      });
+
+    if (error) {
+      console.log("  X " + period + ": " + error.message);
+    } else {
+      console.log("  V " + period + ": NIS " + weeklyAmount);
+    }
+  }
+
+  // Also sync monthly
+  const now = new Date();
+  console.log("\nSyncing monthly periods:");
+  
+  for (let i = 0; i < 12; i++) {
+    const monthStart = new Date(now.getFullYear(), now.getMonth() - 6 + i, 1);
+    const monthStartStr = monthStart.toISOString().split("T")[0];
+
+    const { error } = await supabase
+      .from("cashflow_entries")
+      .upsert({
+        category_id: category.id,
+        period_type: "monthly",
+        period_start: monthStartStr,
+        amount: totalMonthly,
+        notes: "Tools & Software (from Notion):\n" + notes,
+      }, {
+        onConflict: "category_id,period_type,period_start",
+      });
+
+    if (error) {
+      console.log("  X " + monthStartStr + ": " + error.message);
+    } else {
+      console.log("  V " + monthStartStr + ": NIS " + totalMonthly);
+    }
+  }
+
+  console.log("\nDone!");
 }
 
 main();

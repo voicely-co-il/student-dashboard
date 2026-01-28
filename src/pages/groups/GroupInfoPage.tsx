@@ -171,15 +171,15 @@ export default function GroupInfoPage() {
         </Button>
 
         {/* Group Header */}
-        <Card className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 text-white overflow-hidden">
+        <Card className="bg-gradient-brand text-white overflow-hidden">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-xl bg-white/20 flex items-center justify-center">
                 <Users className="h-8 w-8" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">{group.name}</h1>
-                <p className="opacity-90">{group.description}</p>
+                <h1 className="text-2xl font-bold text-white">{group.name}</h1>
+                <p className="text-white/80">{group.description}</p>
               </div>
             </div>
           </CardContent>
@@ -187,82 +187,82 @@ export default function GroupInfoPage() {
 
         {/* Group Stats */}
         <div className="grid grid-cols-3 gap-3">
-          <Card className="bg-white">
+          <Card className="bg-card border border-border">
             <CardContent className="p-4 text-center">
-              <Users className="h-5 w-5 text-purple-500 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-gray-900">{members.length}</p>
-              <p className="text-xs text-gray-500">משתתפים</p>
+              <Users className="h-5 w-5 text-primary mx-auto mb-1" />
+              <p className="text-2xl font-bold text-foreground">{members.length}</p>
+              <p className="text-xs text-muted-foreground">משתתפים</p>
             </CardContent>
           </Card>
-          <Card className="bg-white">
+          <Card className="bg-card border border-border">
             <CardContent className="p-4 text-center">
-              <Star className="h-5 w-5 text-yellow-500 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-gray-900">{group.total_xp}</p>
-              <p className="text-xs text-gray-500">XP קבוצתי</p>
+              <Star className="h-5 w-5 text-voicely-warning mx-auto mb-1" />
+              <p className="text-2xl font-bold text-foreground">{group.total_xp}</p>
+              <p className="text-xs text-muted-foreground">XP קבוצתי</p>
             </CardContent>
           </Card>
-          <Card className="bg-white">
+          <Card className="bg-card border border-border">
             <CardContent className="p-4 text-center">
-              <Trophy className="h-5 w-5 text-orange-500 mx-auto mb-1" />
-              <p className="text-2xl font-bold text-gray-900">{group.total_challenges}</p>
-              <p className="text-xs text-gray-500">אתגרים</p>
+              <Trophy className="h-5 w-5 text-accent mx-auto mb-1" />
+              <p className="text-2xl font-bold text-foreground">{group.total_challenges}</p>
+              <p className="text-xs text-muted-foreground">אתגרים</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Teacher */}
-        <Card className="bg-white">
+        <Card className="bg-card border border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">המורה שלנו</CardTitle>
+            <CardTitle className="text-lg text-foreground">המורה שלנו</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center text-2xl">
+              <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-2xl">
                 {group.teacher_avatar}
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">{group.teacher_name}</h3>
-                <p className="text-sm text-gray-600">מורה לפיתוח קול</p>
+                <h3 className="font-semibold text-foreground">{group.teacher_name}</h3>
+                <p className="text-sm text-muted-foreground">מורה לפיתוח קול</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Lesson Schedule */}
-        <Card className="bg-white">
+        <Card className="bg-card border border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="h-5 w-5 text-purple-500" />
+            <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+              <Calendar className="h-5 w-5 text-primary" />
               מועד השיעור
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-secondary rounded-lg">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-purple-500" />
-                <span className="text-gray-700">יום {group.lesson_day}</span>
+                <Calendar className="h-4 w-4 text-primary" />
+                <span className="text-foreground">יום {group.lesson_day}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-purple-500" />
-                <span className="font-medium text-purple-700">{group.lesson_time}</span>
+                <Clock className="h-4 w-4 text-primary" />
+                <span className="font-medium text-primary">{group.lesson_time}</span>
               </div>
             </div>
-            <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>משך השיעור:</span>
-              <span className="font-medium">{group.lesson_duration} דקות</span>
+              <span className="font-medium text-foreground">{group.lesson_duration} דקות</span>
             </div>
-            <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>פלטפורמה:</span>
-              <span className="font-medium">Zoom</span>
+              <span className="font-medium text-foreground">Zoom</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Members Leaderboard */}
-        <Card className="bg-white">
+        <Card className="bg-card border border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Trophy className="h-5 w-5 text-yellow-500" />
+            <CardTitle className="flex items-center gap-2 text-lg text-foreground">
+              <Trophy className="h-5 w-5 text-voicely-warning" />
               חברי הקבוצה
             </CardTitle>
           </CardHeader>
@@ -276,7 +276,7 @@ export default function GroupInfoPage() {
                   key={member.id}
                   className={cn(
                     'flex items-center gap-3 p-3 rounded-xl transition-all',
-                    isMe ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50'
+                    isMe ? 'bg-secondary border border-primary/20' : 'bg-muted'
                   )}
                 >
                   {/* Rank */}
@@ -285,12 +285,12 @@ export default function GroupInfoPage() {
                     member.rank === 1 && 'bg-yellow-100',
                     member.rank === 2 && 'bg-gray-200',
                     member.rank === 3 && 'bg-orange-100',
-                    member.rank > 3 && 'bg-white border'
+                    member.rank > 3 && 'bg-card border border-border'
                   )}>
                     {isTopThree ? (
                       <span className="text-lg">{getRankEmoji(member.rank)}</span>
                     ) : (
-                      <span className="text-sm font-bold text-gray-600">{member.rank}</span>
+                      <span className="text-sm font-bold text-muted-foreground">{member.rank}</span>
                     )}
                   </div>
 
@@ -300,14 +300,14 @@ export default function GroupInfoPage() {
                     <div className="min-w-0">
                       <p className={cn(
                         'font-medium truncate',
-                        isMe ? 'text-purple-700' : 'text-gray-900'
+                        isMe ? 'text-primary' : 'text-foreground'
                       )}>
                         {member.student_name}
-                        {isMe && <span className="text-purple-500"> (את/ה)</span>}
+                        {isMe && <span className="text-primary"> (את/ה)</span>}
                       </p>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span className="flex items-center gap-0.5">
-                          <Flame className="h-3 w-3 text-orange-400" />
+                          <Flame className="h-3 w-3 text-accent" />
                           {member.current_streak}
                         </span>
                         <span>רמה {member.current_level}</span>
@@ -319,11 +319,11 @@ export default function GroupInfoPage() {
                   <div className="text-left">
                     <p className={cn(
                       'font-bold',
-                      isTopThree ? 'text-purple-600' : 'text-gray-700'
+                      isTopThree ? 'text-primary' : 'text-foreground'
                     )}>
                       {member.total_xp}
                     </p>
-                    <p className="text-xs text-gray-500">XP</p>
+                    <p className="text-xs text-muted-foreground">XP</p>
                   </div>
                 </div>
               );
@@ -333,17 +333,17 @@ export default function GroupInfoPage() {
 
         {/* My Position */}
         {myRank > 0 && (
-          <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-100">
+          <Card className="bg-secondary border border-primary/20">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-purple-600 font-medium">המיקום שלך בקבוצה</p>
-                  <p className="text-3xl font-bold text-purple-700">#{myRank}</p>
+                  <p className="text-sm text-primary font-medium">המיקום שלך בקבוצה</p>
+                  <p className="text-3xl font-bold text-primary">#{myRank}</p>
                 </div>
                 <div className="text-4xl">{getRankEmoji(myRank)}</div>
               </div>
               {myRank > 1 && (
-                <p className="text-sm text-purple-600 mt-2">
+                <p className="text-sm text-primary mt-2">
                   עוד {members[myRank - 2].total_xp - (members.find(m => m.id === currentStudentId)?.total_xp || 0)} XP למקום {myRank - 1}!
                 </p>
               )}
@@ -352,11 +352,11 @@ export default function GroupInfoPage() {
         )}
 
         {/* Encouragement */}
-        <Card className="bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-100">
+        <Card className="bg-gradient-coral text-white">
           <CardContent className="p-4 text-center">
             <span className="text-4xl">💪</span>
-            <p className="font-semibold text-gray-900 mt-2">יחד אנחנו חזקים!</p>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="font-semibold text-white mt-2">יחד אנחנו חזקים!</p>
+            <p className="text-sm text-white/80 mt-1">
               תמשיכו לתרגל ולצבור XP לקבוצה
             </p>
           </CardContent>

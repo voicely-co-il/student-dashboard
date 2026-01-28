@@ -5,28 +5,36 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   FlaskConical,
   Lightbulb,
-  Users,
   Archive,
   RefreshCw,
   Rss,
   ExternalLink,
   Clock,
   TrendingUp,
-  Filter,
   Search,
   Star,
   Sparkles,
   Eye,
-  ChevronRight,
+  Mic,
+  LayoutGrid,
+  List,
+  Kanban,
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { he } from 'date-fns/locale';
+
+// Components
+import { HotFeatureBanner, HotFeature } from '@/components/ai-lab/HotFeatureBanner';
+import { FeatureKanban, KanbanFeature } from '@/components/ai-lab/FeatureKanban';
+import { FeatureTimeline, TimelineFeature } from '@/components/ai-lab/FeatureTimeline';
+import { LiveAssistantTab } from '@/components/live-assistant/LiveAssistantTab';
 
 // Types
 interface IdeaItem {
@@ -63,7 +71,7 @@ interface InspirationSource {
   tags: string[];
 }
 
-// Category colors and icons
+// Category colors
 const categoryConfig: Record<string, { color: string; label: string }> = {
   voice_ai: { color: 'bg-purple-100 text-purple-800', label: 'קול AI' },
   vision_ai: { color: 'bg-blue-100 text-blue-800', label: 'ראייה AI' },
@@ -79,6 +87,75 @@ const statusConfig: Record<string, { color: string; label: string }> = {
   rejected: { color: 'bg-red-100 text-red-800', label: 'נדחה' },
   converted: { color: 'bg-purple-100 text-purple-800', label: 'הומר לניסוי' },
 };
+
+// Hardcoded features in development (will be from DB later)
+const developmentFeatures: KanbanFeature[] = [
+  {
+    id: 'live-assistant',
+    name: 'עוזר שיעור חי',
+    description: 'תמלול שיעורים בזמן אמת עם טיפים למורה',
+    icon: <Mic className="w-4 h-4 text-amber-500" />,
+    stage: 'beta',
+    progress: 75,
+    startedAt: new Date('2025-01-28'), // התחיל היום
+    tags: ['Soniox', 'STT', 'עברית'],
+    isHot: true,
+  },
+  {
+    id: 'qwen3-tts',
+    name: 'Qwen3-TTS',
+    description: 'יצירת קול מלאכותי לתרגולים',
+    icon: <Sparkles className="w-4 h-4 text-blue-500" />,
+    stage: 'research',
+    progress: 15,
+    startedAt: new Date('2025-01-28'), // התחיל היום - רק מחקר ראשוני
+    tags: ['TTS', 'Open Source'],
+  },
+  {
+    id: 'video-gen',
+    name: 'יוצר סרטונים',
+    description: 'יצירת סרטוני לימוד אוטומטיים',
+    icon: <Eye className="w-4 h-4 text-purple-500" />,
+    stage: 'research',
+    progress: 10,
+    startedAt: new Date('2025-01-28'), // התחיל היום - רק מחקר ראשוני
+    tags: ['Video', 'HeyGen'],
+  },
+  {
+    id: 'teacher-chat',
+    name: 'צ\'אט מורה',
+    description: 'עוזר AI אישי למורים',
+    icon: <Lightbulb className="w-4 h-4 text-green-500" />,
+    stage: 'live',
+    progress: 100,
+    startedAt: new Date('2025-01-15'), // התחיל לפני כשבועיים
+    tags: ['RAG', 'Claude'],
+  },
+];
+
+const timelineFeatures: TimelineFeature[] = [
+  {
+    id: 'live-assistant',
+    name: 'עוזר שיעור חי',
+    stage: 'beta',
+    startedAt: new Date('2025-01-28'), // התחיל היום
+    targetDate: new Date('2025-02-15'),
+    isHot: true,
+    milestones: [
+      { name: 'POC - תמלול בסיסי', date: new Date('2025-01-28'), completed: true },
+      { name: 'מגבלות בטא', date: new Date('2025-01-28'), completed: true },
+      { name: 'UI במעבדה', date: new Date('2025-01-28'), completed: true },
+      { name: 'טיפים AI', date: new Date('2025-02-05'), completed: false },
+      { name: 'שחרור למורים', date: new Date('2025-02-15'), completed: false },
+    ],
+  },
+  {
+    id: 'teacher-chat',
+    name: 'צ\'אט מורה',
+    stage: 'live',
+    startedAt: new Date('2025-01-15'), // התחיל לפני כשבועיים
+  },
+];
 
 // Components
 const IdeaCard = ({ idea, onView }: { idea: IdeaItem; onView: () => void }) => {
@@ -232,9 +309,12 @@ const SourceCard = ({ source }: { source: InspirationSource }) => {
 };
 
 const AdminAILab = () => {
-  const [activeTab, setActiveTab] = useState('ideas');
+  const [activeTab, setActiveTab] = useState('development');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'kanban' | 'timeline'>('kanban');
+  const [showLiveAssistant, setShowLiveAssistant] = useState(false);
+  const [bannerExpanded, setBannerExpanded] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch ideas
@@ -302,12 +382,28 @@ const AdminAILab = () => {
     },
   });
 
+  // Hot feature for banner
+  const hotFeature: HotFeature = {
+    id: 'live-assistant',
+    name: 'עוזר שיעור חי',
+    description: 'תמלול שיעורים בזמן אמת עם Soniox + טיפים AI למורה',
+    icon: <Mic className="w-6 h-6 text-amber-500" />,
+    stage: 'beta',
+    progress: 75,
+    startedAt: new Date('2025-01-28'), // התחיל היום
+    targetDate: new Date('2025-02-15'),
+    assignees: ['אילי'],
+    tags: ['Soniox', 'STT', 'Hebrew'],
+    onOpen: () => setShowLiveAssistant(true),
+  };
+
   // Stats
   const stats = {
     total: ideas?.length || 0,
     new: ideas?.filter(i => i.status === 'new').length || 0,
     highRelevance: ideas?.filter(i => (i.ai_relevance_score || 0) >= 80).length || 0,
     sources: sources?.filter(s => s.fetch_enabled).length || 0,
+    inDevelopment: developmentFeatures.filter(f => f.stage !== 'live').length,
   };
 
   // Filter ideas by search
@@ -319,9 +415,9 @@ const AdminAILab = () => {
   );
 
   const tabs = [
-    { id: 'ideas', label: 'רעיונות', icon: Lightbulb },
-    { id: 'sources', label: 'מקורות', icon: Rss },
-    { id: 'experiments', label: 'ניסויים', icon: FlaskConical },
+    { id: 'development', label: 'בפיתוח', icon: FlaskConical, count: stats.inDevelopment },
+    { id: 'ideas', label: 'רעיונות', icon: Lightbulb, count: stats.total },
+    { id: 'sources', label: 'מקורות', icon: Rss, count: stats.sources },
     { id: 'archive', label: 'ארכיון', icon: Archive },
   ];
 
@@ -350,8 +446,28 @@ const AdminAILab = () => {
           </Button>
         </div>
 
+        {/* Hot Feature Banner */}
+        <div className="mb-6">
+          <HotFeatureBanner
+            feature={hotFeature}
+            expanded={bannerExpanded}
+            onToggleExpand={() => setBannerExpanded(!bannerExpanded)}
+          />
+        </div>
+
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <FlaskConical className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{stats.inDevelopment}</p>
+                <p className="text-xs text-muted-foreground">בפיתוח</p>
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -359,7 +475,7 @@ const AdminAILab = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">סה״כ רעיונות</p>
+                <p className="text-xs text-muted-foreground">רעיונות</p>
               </div>
             </CardContent>
           </Card>
@@ -392,7 +508,7 @@ const AdminAILab = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{stats.sources}</p>
-                <p className="text-xs text-muted-foreground">מקורות פעילים</p>
+                <p className="text-xs text-muted-foreground">מקורות</p>
               </div>
             </CardContent>
           </Card>
@@ -409,9 +525,55 @@ const AdminAILab = () => {
               >
                 <tab.icon className="w-4 h-4" />
                 <span>{tab.label}</span>
+                {tab.count !== undefined && (
+                  <Badge variant="secondary" className="text-xs">
+                    {tab.count}
+                  </Badge>
+                )}
               </TabsTrigger>
             ))}
           </TabsList>
+
+          {/* Development Tab */}
+          <TabsContent value="development" className="mt-0">
+            {/* View Toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-medium">פיצ'רים בפיתוח</h2>
+              <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('kanban')}
+                  className="gap-2"
+                >
+                  <Kanban className="w-4 h-4" />
+                  Kanban
+                </Button>
+                <Button
+                  variant={viewMode === 'timeline' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('timeline')}
+                  className="gap-2"
+                >
+                  <List className="w-4 h-4" />
+                  Timeline
+                </Button>
+              </div>
+            </div>
+
+            {viewMode === 'kanban' ? (
+              <FeatureKanban
+                features={developmentFeatures}
+                onFeatureClick={(feature) => {
+                  if (feature.id === 'live-assistant') {
+                    setShowLiveAssistant(true);
+                  }
+                }}
+              />
+            ) : (
+              <FeatureTimeline features={timelineFeatures} />
+            )}
+          </TabsContent>
 
           {/* Ideas Tab */}
           <TabsContent value="ideas" className="mt-0">
@@ -470,9 +632,7 @@ const AdminAILab = () => {
                     key={idea.id}
                     idea={idea}
                     onView={() => {
-                      // Increment view count
                       supabase.rpc('increment_idea_view', { idea_id: idea.id });
-                      // Open URL
                       if (idea.source_url) {
                         window.open(idea.source_url, '_blank');
                       }
@@ -524,17 +684,6 @@ const AdminAILab = () => {
             )}
           </TabsContent>
 
-          {/* Experiments Tab */}
-          <TabsContent value="experiments" className="mt-0">
-            <Card className="p-12 text-center">
-              <FlaskConical className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">בקרוב: ניהול ניסויים</h3>
-              <p className="text-muted-foreground">
-                כאן תוכל לנהל ניסויים פעילים, לעקוב אחרי מדדים, ולקדם לשלבים הבאים
-              </p>
-            </Card>
-          </TabsContent>
-
           {/* Archive Tab */}
           <TabsContent value="archive" className="mt-0">
             <Card className="p-12 text-center">
@@ -546,6 +695,19 @@ const AdminAILab = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Live Assistant Dialog */}
+        <Dialog open={showLiveAssistant} onOpenChange={setShowLiveAssistant}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mic className="w-5 h-5 text-amber-500" />
+                עוזר שיעור חי - בטא
+              </DialogTitle>
+            </DialogHeader>
+            <LiveAssistantTab />
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

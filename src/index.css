@@ -4,92 +4,114 @@
 
 @layer base {
   :root {
-    /* Voicely Brand Colors - from logo */
-    --background: 140 20% 98%;
-    --foreground: 220 10% 25%;
+    /* ========================================
+       VOICELY DESIGN SYSTEM
+       Based on voicely.co.il brand colors
+       See: src/styles/design-system.md
+       ======================================== */
+
+    /* Background & Foreground */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 7%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 10% 25%;
+    --card-foreground: 0 0% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 25%;
+    --popover-foreground: 0 0% 7%;
 
-    /* Primary: Voicely Green (from bird body) */
-    --primary: 158 72% 52%;
+    /* Primary: Voicely Purple (#391E59) */
+    --primary: 270 50% 23%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Soft mint background */
-    --secondary: 158 40% 95%;
-    --secondary-foreground: 158 72% 35%;
+    /* Secondary: Light purple tint */
+    --secondary: 270 30% 96%;
+    --secondary-foreground: 270 50% 23%;
 
-    /* Muted: Soft gray-green */
-    --muted: 160 15% 93%;
-    --muted-foreground: 220 10% 45%;
+    /* Muted: Neutral gray */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    /* Accent: Voicely Orange (from wing feathers) */
-    --accent: 24 95% 58%;
+    /* Accent: Voicely Coral (#ED4A69) */
+    --accent: 350 82% 61%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    /* Destructive: Red (#E8424D) */
+    --destructive: 356 79% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 160 20% 88%;
-    --input: 160 20% 88%;
-    --ring: 158 72% 52%;
+    /* Borders & Inputs */
+    --border: 216 12% 84%;
+    --input: 216 12% 84%;
+    --ring: 270 50% 23%;
 
-    --radius: 1rem;
+    --radius: 0.75rem;
 
-    /* Voicely Semantic Colors */
-    --voicely-green: 158 72% 52%;
-    --voicely-mint: 158 60% 70%;
-    --voicely-yellow: 45 90% 55%;
-    --voicely-red: 0 74% 60%;
-    --voicely-orange: 24 95% 58%;
-    --voicely-coral: 12 85% 55%;
-    --voicely-charcoal: 220 10% 35%;
+    /* ========================================
+       SEMANTIC COLORS
+       Use these for specific UI contexts
+       ======================================== */
+    --voicely-purple: 270 50% 23%;
+    --voicely-purple-light: 270 40% 35%;
+    --voicely-coral: 350 82% 61%;
+    --voicely-red: 356 79% 58%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(158 72% 52%), hsl(158 60% 70%));
-    --gradient-accent: linear-gradient(135deg, hsl(24 95% 58%), hsl(12 85% 55%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(160 20% 98%));
+    /* Status Colors */
+    --voicely-success: 160 84% 39%;
+    --voicely-warning: 38 92% 50%;
+    --voicely-error: 0 84% 60%;
+    --voicely-info: 217 91% 60%;
+
+    /* Text on colored backgrounds */
+    --voicely-charcoal: 0 0% 7%;
+
+    /* ========================================
+       GRADIENTS
+       ======================================== */
+    --gradient-brand: linear-gradient(135deg, #391E59 0%, #ED4A69 100%);
+    --gradient-purple: linear-gradient(135deg, #391E59 0%, #5B3A7A 100%);
+    --gradient-coral: linear-gradient(135deg, #ED4A69 0%, #F97316 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(0 0% 98%) 100%);
   }
 
   .dark {
-    --background: 220 15% 10%;
-    --foreground: 160 20% 95%;
+    --background: 240 10% 10%;
+    --foreground: 0 0% 95%;
 
-    --card: 220 15% 14%;
-    --card-foreground: 160 20% 95%;
+    --card: 240 10% 14%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 220 15% 12%;
-    --popover-foreground: 160 20% 95%;
+    --popover: 240 10% 12%;
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 158 72% 52%;
-    --primary-foreground: 220 15% 10%;
+    --primary: 270 50% 55%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 158 60% 70%;
+    --secondary: 240 10% 18%;
+    --secondary-foreground: 270 40% 75%;
 
-    --muted: 220 15% 20%;
-    --muted-foreground: 160 15% 65%;
+    --muted: 240 10% 20%;
+    --muted-foreground: 0 0% 65%;
 
-    --accent: 24 95% 58%;
-    --accent-foreground: 220 15% 10%;
+    --accent: 350 82% 61%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62% 40%;
+    --destructive: 356 70% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 22%;
-    --input: 220 15% 20%;
-    --ring: 158 72% 52%;
+    --border: 240 10% 22%;
+    --input: 240 10% 20%;
+    --ring: 270 50% 55%;
 
-    --voicely-green: 158 72% 52%;
-    --voicely-mint: 158 50% 45%;
-    --voicely-yellow: 45 90% 55%;
-    --voicely-red: 0 74% 55%;
-    --voicely-orange: 24 95% 58%;
-    --voicely-coral: 12 85% 55%;
-    --voicely-charcoal: 220 10% 70%;
+    --voicely-purple: 270 50% 55%;
+    --voicely-purple-light: 270 40% 65%;
+    --voicely-coral: 350 82% 61%;
+    --voicely-red: 356 70% 50%;
+    --voicely-success: 160 84% 39%;
+    --voicely-warning: 38 92% 50%;
+    --voicely-error: 0 84% 55%;
+    --voicely-info: 217 91% 60%;
+    --voicely-charcoal: 0 0% 85%;
   }
 }
 
@@ -108,18 +130,55 @@
 }
 
 @layer utilities {
-  .playful-shadow {
-    box-shadow: 0 4px 20px -4px hsl(158 72% 52% / 0.15),
+  /* ========================================
+     SHADOW UTILITIES
+     ======================================== */
+  .shadow-card {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  }
+
+  .shadow-elevated {
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  }
+
+  .shadow-modal {
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  }
+
+  .shadow-purple {
+    box-shadow: 0 4px 20px -4px hsl(270 50% 23% / 0.2),
                 0 2px 8px -2px hsl(0 0% 0% / 0.08);
   }
-  
-  .playful-shadow-accent {
-    box-shadow: 0 4px 20px -4px hsl(24 95% 58% / 0.2),
+
+  .shadow-coral {
+    box-shadow: 0 4px 20px -4px hsl(350 82% 61% / 0.25),
                 0 2px 8px -2px hsl(0 0% 0% / 0.08);
   }
-  
+
+  /* ========================================
+     GRADIENT UTILITIES
+     ======================================== */
+  .bg-gradient-brand {
+    background: linear-gradient(135deg, #391E59 0%, #ED4A69 100%);
+  }
+
+  .bg-gradient-purple {
+    background: linear-gradient(135deg, #391E59 0%, #5B3A7A 100%);
+  }
+
+  .bg-gradient-coral {
+    background: linear-gradient(135deg, #ED4A69 0%, #F97316 100%);
+  }
+
+  /* ========================================
+     GLASS EFFECT
+     ======================================== */
   .glass-effect {
     backdrop-filter: blur(12px);
-    background: hsl(0 0% 100% / 0.8);
+    background: hsl(0 0% 100% / 0.85);
+  }
+
+  .dark .glass-effect {
+    background: hsl(240 10% 14% / 0.85);
   }
 }

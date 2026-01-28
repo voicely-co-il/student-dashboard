@@ -8,69 +8,41 @@ import {
   ChevronUp,
   Loader2,
   RefreshCw,
-  PiggyBank,
-  Target,
-  Wallet,
-  ArrowUpRight,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useExpenseAnalysis, Recommendation } from "@/hooks/admin/useExpenseAnalysis";
+import { useExpenseAnalysis, Recommendation, Expense } from "@/hooks/admin/useExpenseAnalysis";
 
-function RecommendationCard({ rec, index }: { rec: Recommendation; index: number }) {
-  const [isOpen, setIsOpen] = useState(false);
-
+function RecommendationItem({ rec }: { rec: Recommendation }) {
   const priorityConfig = {
-    high: { color: "text-red-600 bg-red-50 border-red-200", icon: AlertTriangle, label: "דחוף" },
-    medium: { color: "text-amber-600 bg-amber-50 border-amber-200", icon: Lightbulb, label: "מומלץ" },
-    low: { color: "text-blue-600 bg-blue-50 border-blue-200", icon: Sparkles, label: "הזדמנות" },
-  };
-
-  const typeConfig = {
-    warning: { icon: AlertTriangle, bg: "bg-red-500" },
-    suggestion: { icon: Lightbulb, bg: "bg-amber-500" },
-    opportunity: { icon: Sparkles, bg: "bg-green-500" },
+    high: { color: "border-r-red-500", icon: AlertTriangle, iconColor: "text-red-500" },
+    medium: { color: "border-r-yellow-500", icon: Lightbulb, iconColor: "text-yellow-500" },
+    low: { color: "border-r-blue-500", icon: Sparkles, iconColor: "text-blue-500" },
   };
 
   const config = priorityConfig[rec.priority];
   const Icon = config.icon;
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className={`rounded-lg border p-3 ${config.color}`}>
-        <CollapsibleTrigger asChild>
-          <button className="w-full text-right">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Icon className="w-4 h-4" />
-                <span className="font-medium">{rec.title}</span>
-                <Badge variant="outline" className="text-xs">
-                  {config.label}
-                </Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                {rec.potentialSaving > 0 && (
-                  <span className="text-sm font-bold text-green-700" dir="ltr">
-                    ₪{rec.potentialSaving.toLocaleString("he-IL")}/שנה
-                  </span>
-                )}
-                {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-              </div>
-            </div>
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-2 pt-2 border-t border-current/10">
-          <p className="text-sm mb-2">{rec.description}</p>
-          <div className="flex items-start gap-2 text-sm">
-            <Target className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>{rec.action}</span>
+    <div className={`bg-card border border-border/50 rounded-lg p-3 border-r-4 ${config.color}`}>
+      <div className="flex items-start gap-2">
+        <Icon className={`w-4 h-4 mt-0.5 ${config.iconColor}`} />
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <span className="font-medium text-sm text-foreground">{rec.title}</span>
+            {rec.potentialSaving > 0 && (
+              <Badge variant="secondary" className="text-xs font-semibold">
+                ₪{rec.potentialSaving.toLocaleString("he-IL")}/שנה
+              </Badge>
+            )}
           </div>
-        </CollapsibleContent>
+          <p className="text-xs text-muted-foreground mt-1">{rec.description}</p>
+        </div>
       </div>
-    </Collapsible>
+    </div>
   );
 }
 
@@ -80,10 +52,10 @@ export default function ExpenseOptimization() {
 
   if (isLoading) {
     return (
-      <Card className="mt-6">
-        <CardContent className="py-8 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          <span className="mr-2 text-muted-foreground">מנתח הוצאות...</span>
+      <Card className="border-border/50">
+        <CardContent className="py-6 flex items-center justify-center gap-2">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">מנתח הוצאות...</span>
         </CardContent>
       </Card>
     );
@@ -91,9 +63,9 @@ export default function ExpenseOptimization() {
 
   if (error || !data) {
     return (
-      <Card className="mt-6">
-        <CardContent className="py-8 text-center">
-          <p className="text-muted-foreground mb-2">לא ניתן לטעון ניתוח הוצאות</p>
+      <Card className="border-border/50">
+        <CardContent className="py-6 text-center">
+          <p className="text-sm text-muted-foreground mb-2">לא ניתן לטעון ניתוח</p>
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="w-4 h-4 ml-1" />
             נסה שוב
@@ -103,26 +75,29 @@ export default function ExpenseOptimization() {
     );
   }
 
-  const { summary, recommendations, totalPotentialSaving, top5Expenses } = data;
+  const { recommendations, totalPotentialSaving, allExpenses = [], summary } = data;
 
   return (
-    <Card className="mt-6 border-2 border-dashed border-amber-300 bg-gradient-to-br from-amber-50/50 to-orange-50/50">
+    <Card className="border-border/50">
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-3">
           <CollapsibleTrigger asChild>
             <button className="w-full text-right">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <PiggyBank className="w-5 h-5 text-amber-600" />
-                  <CardTitle className="text-lg">אופטימיזציית הוצאות</CardTitle>
-                  <Badge className="bg-green-600">
-                    חיסכון פוטנציאלי: ₪{totalPotentialSaving.toLocaleString("he-IL")}/שנה
-                  </Badge>
+                  <TrendingDown className="w-5 h-5 text-red-500" />
+                  <CardTitle className="text-base font-semibold">ניתוח הוצאות</CardTitle>
+                  {totalPotentialSaving > 0 && (
+                    <Badge className="text-xs bg-green-500/20 text-green-500 border-green-500/30 hover:bg-green-500/30">
+                      חיסכון: ₪{totalPotentialSaving.toLocaleString("he-IL")}/שנה
+                    </Badge>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
+                    className="h-8 w-8"
                     onClick={(e) => {
                       e.stopPropagation();
                       refetch();
@@ -130,7 +105,7 @@ export default function ExpenseOptimization() {
                   >
                     <RefreshCw className="w-4 h-4" />
                   </Button>
-                  {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                  {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                 </div>
               </div>
             </button>
@@ -138,91 +113,49 @@ export default function ExpenseOptimization() {
         </CardHeader>
 
         <CollapsibleContent>
-          <CardContent className="space-y-6">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-white rounded-lg p-3 border">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <ArrowUpRight className="w-4 h-4 text-green-600" />
-                  הכנסה חודשית
-                </div>
-                <div className="text-xl font-bold text-green-600" dir="ltr">
-                  ₪{summary.monthlyIncome.toLocaleString("he-IL")}
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-3 border">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <TrendingDown className="w-4 h-4 text-red-600" />
-                  הוצאות חודשיות
-                </div>
-                <div className="text-xl font-bold text-red-600" dir="ltr">
-                  ₪{summary.monthlyExpenses.toLocaleString("he-IL")}
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-3 border">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <Wallet className="w-4 h-4 text-blue-600" />
-                  רווח גולמי
-                </div>
-                <div className="text-xl font-bold text-blue-600" dir="ltr">
-                  ₪{summary.grossProfit.toLocaleString("he-IL")}
+          <CardContent className="pt-0 space-y-4">
+            {/* All Expenses - Detailed List */}
+            {allExpenses.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-3 text-foreground flex items-center justify-between">
+                  <span>כלים ותוכנות ({allExpenses.length})</span>
+                  <span className="text-primary font-bold" dir="ltr">
+                    סה״כ: ₪{summary.monthlyExpenses.toLocaleString("he-IL")}/חודש
+                  </span>
+                </h4>
+                <div className="bg-muted/30 rounded-lg border border-border/50 divide-y divide-border/50 max-h-[300px] overflow-y-auto">
+                  {allExpenses.map((expense, i) => (
+                    <div key={i} className="flex items-center justify-between py-2 px-3 hover:bg-muted/50 transition-colors">
+                      <span className="text-sm text-foreground">{expense.name}</span>
+                      <span className="font-semibold tabular-nums text-foreground text-sm" dir="ltr">
+                        ₪{expense.monthlyCost.toLocaleString("he-IL")}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="bg-white rounded-lg p-3 border">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <Target className="w-4 h-4" />
-                  יחס הוצאות
-                </div>
-                <div className="space-y-1">
-                  <div className="text-xl font-bold">{summary.expenseRatio}%</div>
-                  <Progress
-                    value={summary.expenseRatio}
-                    className="h-1.5"
-                  />
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* Recommendations */}
-            <div>
-              <h3 className="font-medium mb-3 flex items-center gap-2">
-                <Lightbulb className="w-4 h-4 text-amber-600" />
-                המלצות לחיסכון ({recommendations.length})
-              </h3>
-              <div className="space-y-2">
-                {recommendations.map((rec, i) => (
-                  <RecommendationCard key={i} rec={rec} index={i} />
-                ))}
+            {recommendations.length > 0 && (
+              <div>
+                <h4 className="text-sm font-semibold mb-3 text-foreground flex items-center gap-1.5">
+                  <Lightbulb className="w-4 h-4 text-yellow-500" />
+                  המלצות ({recommendations.length})
+                </h4>
+                <div className="space-y-2">
+                  {recommendations.slice(0, 3).map((rec, i) => (
+                    <RecommendationItem key={i} rec={rec} />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Top 5 Expenses */}
-            <div>
-              <h3 className="font-medium mb-3 flex items-center gap-2">
-                <TrendingDown className="w-4 h-4 text-red-600" />
-                5 ההוצאות הגדולות
-              </h3>
-              <div className="space-y-2">
-                {top5Expenses.map((expense, i) => {
-                  const percent = Math.round((expense.monthlyCost / summary.monthlyExpenses) * 100);
-                  return (
-                    <div key={i} className="flex items-center gap-3">
-                      <span className="text-sm text-muted-foreground w-4">{i + 1}.</span>
-                      <div className="flex-1">
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>{expense.name}</span>
-                          <span className="font-medium" dir="ltr">
-                            ₪{expense.monthlyCost.toLocaleString("he-IL")}
-                          </span>
-                        </div>
-                        <Progress value={percent} className="h-1.5" />
-                      </div>
-                      <span className="text-xs text-muted-foreground w-10 text-left">{percent}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            {recommendations.length === 0 && allExpenses.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-2">
+                אין מספיק נתונים לניתוח
+              </p>
+            )}
           </CardContent>
         </CollapsibleContent>
       </Collapsible>

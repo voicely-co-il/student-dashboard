@@ -62,22 +62,45 @@ Deno.serve(async (req) => {
       }))
       .filter((e: Expense) => e.monthlyCost > 0);
 
-    // Fetch income from cashflow
-    const { data: incomeEntries } = await supabase
-      .from('cashflow_entries')
-      .select('amount, category_id')
-      .eq('period_type', 'weekly')
-      .order('period_start', { ascending: false })
-      .limit(13);
+    // Calculate income from transcripts (lessons) - not from cashflow_entries
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
 
-    const { data: incomeCategories } = await supabase
-      .from('cashflow_categories')
-      .select('id')
-      .eq('type', 'income');
+    const { data: transcripts } = await supabase
+      .from('transcripts')
+      .select('id, lesson_date, created_at')
+      .gte('lesson_date', fourWeeksAgo.toISOString())
+      .order('lesson_date', { ascending: false });
 
-    const incomeCatIds = incomeCategories?.map(c => c.id) || [];
-    const incomeOnly = incomeEntries?.filter(e => incomeCatIds.includes(e.category_id)) || [];
-    const weeklyIncome = incomeOnly.reduce((sum, e) => sum + Number(e.amount), 0) / (incomeOnly.length || 1);
+    // Get pricing from settings
+    const { data: settingsData } = await supabase
+      .from('cashflow_settings')
+      .select('setting_key, setting_value');
+
+    const settings: Record<string, string> = {};
+    settingsData?.forEach((s: { setting_key: string; setting_value: string }) => {
+      settings[s.setting_key] = s.setting_value;
+    });
+
+    const price1on1 = parseFloat(settings.price_1on1_new || '200');
+    const priceVeteran = parseFloat(settings.price_1on1_veteran || '180');
+    const avgLessonPrice = (price1on1 + priceVeteran) / 2;
+
+    // Count lessons per week
+    const lessonsByWeek = new Map<string, number>();
+    transcripts?.forEach(t => {
+      const date = new Date(t.lesson_date || t.created_at);
+      const day = date.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      date.setDate(date.getDate() + diff);
+      const weekKey = date.toISOString().split('T')[0];
+      lessonsByWeek.set(weekKey, (lessonsByWeek.get(weekKey) || 0) + 1);
+    });
+
+    const totalLessons = transcripts?.length || 0;
+    const weeksWithLessons = lessonsByWeek.size || 1;
+    const lessonsPerWeek = totalLessons / weeksWithLessons;
+    const weeklyIncome = lessonsPerWeek * avgLessonPrice;
     const monthlyIncome = weeklyIncome * 4.33;
 
     const totalMonthlyExpenses = expenses.reduce((sum, e) => sum + e.monthlyCost, 0);
@@ -85,9 +108,9 @@ Deno.serve(async (req) => {
     // Generate recommendations
     const recommendations: Recommendation[] = [];
 
-    // 1. Expense ratio
-    const expenseRatio = totalMonthlyExpenses / monthlyIncome;
-    if (expenseRatio > 0.5) {
+    // 1. Expense ratio (avoid division by zero)
+    const expenseRatio = monthlyIncome > 0 ? totalMonthlyExpenses / monthlyIncome : 0;
+    if (monthlyIncome > 0 && expenseRatio > 0.5) {
       recommendations.push({
         type: 'warning',
         priority: 'high',
@@ -132,7 +155,7 @@ Deno.serve(async (req) => {
       e.name.toLowerCase().includes('ads') || e.name.toLowerCase().includes('facebook') && e.name.toLowerCase().includes('ad')
     );
     const totalAds = adSpend.reduce((sum, e) => sum + e.monthlyCost, 0);
-    if (totalAds > 500) {
+    if (totalAds > 500 && monthlyIncome > 0) {
       const adRatio = totalAds / monthlyIncome;
       recommendations.push({
         type: adRatio > 0.15 ? 'warning' : 'suggestion',
@@ -186,8 +209,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Top 5 expenses
-    const top5 = [...expenses].sort((a, b) => b.monthlyCost - a.monthlyCost).slice(0, 5);
+    // All expenses sorted by cost (descending)
+    const allExpensesSorted = [...expenses].sort((a, b) => b.monthlyCost - a.monthlyCost);
+    const top5 = allExpensesSorted.slice(0, 5);
 
     // Sort recommendations by priority
     recommendations.sort((a, b) => {
@@ -208,6 +232,7 @@ Deno.serve(async (req) => {
         recommendations,
         totalPotentialSaving: Math.round(totalPotentialSaving),
         top5Expenses: top5,
+        allExpenses: allExpensesSorted,
         expenseCount: expenses.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

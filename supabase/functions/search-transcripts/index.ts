@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { query, studentId, limit = 10 } = await req.json();
+    const { query, studentId, studentName, limit = 10 } = await req.json();
 
     if (!query) {
       return new Response(JSON.stringify({ error: "Query is required" }), {
@@ -33,19 +33,21 @@ Deno.serve(async (req) => {
     const openai = new OpenAI({ apiKey: openaiKey });
 
     // Generate embedding for the search query
+    // IMPORTANT: Must use same model as sync-gdrive.ts for consistent results
     const embeddingResponse = await openai.embeddings.create({
-      model: "text-embedding-ada-002",
+      model: "text-embedding-3-small",
       input: query,
     });
 
     const queryEmbedding = embeddingResponse.data[0].embedding;
 
     // Search using the vector similarity function
+    // Lower threshold (0.3) to get more results - can filter in app layer
     const { data: results, error } = await supabase.rpc("search_transcripts", {
       query_embedding: queryEmbedding,
-      match_threshold: 0.7,
+      match_threshold: 0.3,
       match_count: limit,
-      filter_student_id: studentId || null,
+      filter_student_name: studentName || null,
     });
 
     if (error) {
